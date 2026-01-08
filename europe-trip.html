@@ -1,64 +1,129 @@
-<script type="module">
-    // 引入 Firebase SDK
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-    const { createApp, ref: vueRef, computed, watch } = Vue;
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Muji Travel - 歐洲同步版</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --mocha: #bda38f; --latte: #f5ebe0; --text: #5e503f; }
+        body { background-color: var(--latte); color: var(--text); font-family: "PingFang TC", sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .card-shadow { box-shadow: 0 10px 25px -5px rgba(189, 163, 143, 0.1); }
+        .active-date { background-color: var(--mocha) !important; color: white !important; }
+    </style>
+</head>
+<body class="pb-24">
+    <div id="app">
+        <header class="p-8 text-center">
+            <h1 class="text-xs tracking-[0.3em] uppercase opacity-60">Real-time Cloud Sync</h1>
+            <p class="text-2xl font-serif mt-2">歐洲旅程紀行</p>
+        </header>
 
-    // 1. 在這裡填入你剛剛申請的 Firebase Key
-    const firebaseConfig = {
-  apiKey: "AIzaSyAxZx7UnDg25ZcMDiTJRhSdwkiEApsVHjc",
-  authDomain: "europe-trip-app.firebaseapp.com",
-  databaseURL: "https://europe-trip-app-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "europe-trip-app",
-  storageBucket: "europe-trip-app.firebasestorage.app",
-  messagingSenderId: "328114172706",
-  appId: "1:328114172706:web:88a10ea7820325cbf02b7b",
-  measurementId: "G-3C0N9RLK54"
-};
+        <div class="flex overflow-x-auto px-6 space-x-4 no-scrollbar mb-8">
+            <div v-for="d in dates" :key="d" @click="selectedDate = d"
+                 :class="['flex-shrink-0 w-16 h-20 flex flex-col items-center justify-center rounded-2xl bg-white transition-all', { 'active-date shadow-lg': selectedDate === d }]">
+                <span class="text-[10px] opacity-60 uppercase">{{ d.split('/')[0] }}月</span>
+                <span class="text-lg font-bold">{{ d.split('/')[1] }}</span>
+            </div>
+        </div>
 
-    // 初始化 Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const dbRef = ref(db, 'trip_data');
+        <main class="px-6">
+            <div class="flex space-x-6 mb-6 text-sm">
+                <button @click="activeTab = 'itinerary'" :class="{'font-bold border-b-2 border-mocha': activeTab === 'itinerary'}">行程同步</button>
+                <button @click="activeTab = 'finance'" :class="{'font-bold border-b-2 border-mocha': activeTab === 'finance'}">分帳換算</button>
+            </div>
 
-    createApp({
-        setup() {
-            const activeTab = vueRef('itinerary');
-            const selectedDate = vueRef('08/15');
-            const dates = ['08/15', '08/16', '08/17', '08/18', '08/19', '08/20'];
-            const rate = vueRef(35.2);
-            const expense = vueRef({ eur: 0, people: 2 });
-            const itineraryData = vueRef({});
+            <div v-if="activeTab === 'itinerary'" class="space-y-4">
+                <div v-for="(plan, idx) in currentItinerary" :key="idx" class="bg-white p-5 rounded-[2rem] card-shadow">
+                    <div class="flex justify-between">
+                        <input type="time" v-model="plan.time" class="text-sm font-medium bg-transparent outline-none text-mocha">
+                        <button @click="removePlan(idx)" class="text-red-200 text-xs">✕ 刪除</button>
+                    </div>
+                    <input v-model="plan.loc" placeholder="輸入景點名稱..." class="w-full mt-2 text-lg focus:outline-none bg-transparent">
+                </div>
+                <button @click="addPlan" class="w-full py-4 rounded-2xl border-2 border-dashed border-mocha/30 text-sm text-mocha">+ 新增行程 (全體同步)</button>
+            </div>
 
-            // 2. 從 Firebase 讀取資料 (即時同步關鍵)
-            onValue(dbRef, (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    itineraryData.value = data;
-                }
-            });
+            <div v-if="activeTab === 'finance'" class="bg-white p-6 rounded-[2rem] card-shadow space-y-4">
+                <div>
+                    <label class="text-[10px] opacity-50 uppercase">當日匯率 (1€ = ? NTD)</label>
+                    <input type="number" v-model="rate" class="w-full text-xl py-2 border-b border-latte outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-latte/30 p-3 rounded-xl">
+                        <label class="text-[10px] opacity-50">歐元總額</label>
+                        <input type="number" v-model="expense.eur" class="w-full bg-transparent text-lg outline-none">
+                    </div>
+                    <div class="bg-latte/30 p-3 rounded-xl">
+                        <label class="text-[10px] opacity-50">分錢人數</label>
+                        <input type="number" v-model="expense.people" class="w-full bg-transparent text-lg outline-none">
+                    </div>
+                </div>
+                <div class="p-4 bg-mocha text-white rounded-2xl text-center">
+                    <p class="text-xs opacity-80">每人約需支付</p>
+                    <p class="text-2xl font-bold">NT$ {{ Math.round((expense.eur * rate) / expense.people) }}</p>
+                </div>
+            </div>
+        </main>
 
-            // 3. 當資料變動時，自動推送到 Firebase
-            watch(itineraryData, (newData) => {
-                set(dbRef, JSON.parse(JSON.stringify(newData)));
-            }, { deep: true });
+        <nav class="fixed bottom-6 left-6 right-6 h-16 bg-white/80 backdrop-blur rounded-full shadow-lg flex justify-around items-center px-8 border border-white">
+            <span class="text-xs opacity-40">多人即時連線中...</span>
+        </nav>
+    </div>
 
-            const currentItinerary = computed(() => {
-                if (!itineraryData.value[selectedDate.value]) {
-                    itineraryData.value[selectedDate.value] = [];
-                }
-                return itineraryData.value[selectedDate.value];
-            });
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        const { createApp, ref: vueRef, computed, watch } = Vue;
 
-            const addPlan = () => {
-                currentItinerary.value.push({ time: '12:00', loc: '', temp: '20' });
-            };
+        const firebaseConfig = {
+            apiKey: "AIzaSyAxZx7UnDg25ZcMDiTJRhSdwkiEApsVHjc",
+            authDomain: "europe-trip-app.firebaseapp.com",
+            databaseURL: "https://europe-trip-app-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "europe-trip-app",
+            storageBucket: "europe-trip-app.firebasestorage.app",
+            messagingSenderId: "328114172706",
+            appId: "1:328114172706:web:88a10ea7820325cbf02b7b",
+            measurementId: "G-3C0N9RLK54"
+        };
 
-            const removePlan = (idx) => {
-                currentItinerary.value.splice(idx, 1);
-            };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dbRef = ref(db, 'trip_data');
 
-            return { activeTab, selectedDate, dates, rate, expense, currentItinerary, addPlan, removePlan };
-        }
-    }).mount('#app');
-</script>
+        createApp({
+            setup() {
+                const activeTab = vueRef('itinerary');
+                const selectedDate = vueRef('08/15');
+                const dates = ['08/15', '08/16', '08/17', '08/18', '08/19', '08/20'];
+                const rate = vueRef(35.2);
+                const expense = vueRef({ eur: 0, people: 2 });
+                const itineraryData = vueRef({});
+
+                onValue(dbRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) itineraryData.value = data;
+                });
+
+                watch(itineraryData, (newData) => {
+                    set(dbRef, JSON.parse(JSON.stringify(newData)));
+                }, { deep: true });
+
+                const currentItinerary = computed(() => {
+                    if (!itineraryData.value[selectedDate.value]) {
+                        itineraryData.value[selectedDate.value] = [];
+                    }
+                    return itineraryData.value[selectedDate.value];
+                });
+
+                const addPlan = () => currentItinerary.value.push({ time: '12:00', loc: '' });
+                const removePlan = (idx) => currentItinerary.value.splice(idx, 1);
+
+                return { activeTab, selectedDate, dates, rate, expense, currentItinerary, addPlan, removePlan };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

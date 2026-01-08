@@ -1,0 +1,64 @@
+<script type="module">
+    // 引入 Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    const { createApp, ref: vueRef, computed, watch } = Vue;
+
+    // 1. 在這裡填入你剛剛申請的 Firebase Key
+    const firebaseConfig = {
+  apiKey: "AIzaSyAxZx7UnDg25ZcMDiTJRhSdwkiEApsVHjc",
+  authDomain: "europe-trip-app.firebaseapp.com",
+  databaseURL: "https://europe-trip-app-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "europe-trip-app",
+  storageBucket: "europe-trip-app.firebasestorage.app",
+  messagingSenderId: "328114172706",
+  appId: "1:328114172706:web:88a10ea7820325cbf02b7b",
+  measurementId: "G-3C0N9RLK54"
+};
+
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dbRef = ref(db, 'trip_data');
+
+    createApp({
+        setup() {
+            const activeTab = vueRef('itinerary');
+            const selectedDate = vueRef('08/15');
+            const dates = ['08/15', '08/16', '08/17', '08/18', '08/19', '08/20'];
+            const rate = vueRef(35.2);
+            const expense = vueRef({ eur: 0, people: 2 });
+            const itineraryData = vueRef({});
+
+            // 2. 從 Firebase 讀取資料 (即時同步關鍵)
+            onValue(dbRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    itineraryData.value = data;
+                }
+            });
+
+            // 3. 當資料變動時，自動推送到 Firebase
+            watch(itineraryData, (newData) => {
+                set(dbRef, JSON.parse(JSON.stringify(newData)));
+            }, { deep: true });
+
+            const currentItinerary = computed(() => {
+                if (!itineraryData.value[selectedDate.value]) {
+                    itineraryData.value[selectedDate.value] = [];
+                }
+                return itineraryData.value[selectedDate.value];
+            });
+
+            const addPlan = () => {
+                currentItinerary.value.push({ time: '12:00', loc: '', temp: '20' });
+            };
+
+            const removePlan = (idx) => {
+                currentItinerary.value.splice(idx, 1);
+            };
+
+            return { activeTab, selectedDate, dates, rate, expense, currentItinerary, addPlan, removePlan };
+        }
+    }).mount('#app');
+</script>

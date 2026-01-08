@@ -21,10 +21,19 @@
         .card-muji { background: rgba(255, 255, 255, 0.85); border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
         .status-banner { background: var(--deep-banner); color: white; border-radius: 20px; padding: 24px; }
         .timeline-line { position: absolute; left: 42px; top: 0; bottom: 0; width: 1px; background: rgba(67, 52, 34, 0.15); z-index: 0; }
-        .input-box { background: #ffffff; border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 14px; border: 1px solid rgba(0,0,0,0.05); outline: none; text-align: center; }
+        
+        /* 統一輸入框樣式 */
+        .input-box { background: #ffffff; border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 14px; border: 1px solid rgba(0,0,0,0.05); outline: none; transition: color 0.3s; }
+        
+        /* 時間輸入控制 */
+        .time-input { color: #ccc; text-align: center; font-weight: bold; width: 100%; background: transparent; border: none; outline: none; }
+        .time-input.has-value { color: var(--dark-text); }
+        
         .time-badge { background: white; border-radius: 14px; width: 84px; padding: 10px 4px; text-align: center; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        #map { height: 400px; border-radius: 24px; border: 6px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .select-transport { background: white; border-radius: 8px; font-size: 11px; padding: 4px; text-align: center; width: 84px; margin-top: 8px; border: 1px solid rgba(0,0,0,0.05); outline: none; }
+        #map { height: 400px; border-radius: 24px; border: 6px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+        .icon-prefix { font-size: 14px; margin-right: 8px; flex-shrink: 0; }
     </style>
 </head>
 <body class="pb-24">
@@ -36,7 +45,7 @@
                     <p class="text-[10px] opacity-40 uppercase tracking-[0.2em] mt-2">開啟您的旅程</p>
                 </div>
                 <div class="space-y-4">
-                    <input v-model="setup.destination" placeholder="目的地 (例如：東京)" class="input-box py-4">
+                    <input v-model="setup.destination" placeholder="目的地 (例如：東京)" class="input-box py-4 text-center">
                     <div class="grid grid-cols-2 gap-3">
                         <input type="date" v-model="setup.startDate" class="input-box text-xs">
                         <input type="date" v-model="setup.endDate" class="input-box text-xs">
@@ -87,7 +96,10 @@
                                 <select v-model="p.ampm" class="text-[10px] font-black block w-full outline-none text-center bg-transparent">
                                     <option value="上午">上午</option><option value="下午">下午</option>
                                 </select>
-                                <input type="text" v-model="p.time" placeholder="00:00" class="text-sm font-bold w-full text-center outline-none mt-1">
+                                <input type="text" v-model="p.time" 
+                                       @focus="if(p.time === '00:00') p.time = ''" 
+                                       @blur="if(p.time === '') p.time = '00:00'"
+                                       :class="['time-input mt-1', { 'has-value': p.time !== '00:00' }]">
                             </div>
                             <select v-model="p.transport" class="select-transport">
                                 <option value="🚗 交通">🚗 交通</option><option value="🚇 地鐵">🚇 地鐵</option>
@@ -100,40 +112,50 @@
                                 <input v-model="p.loc" placeholder="行程標題..." class="text-base font-bold bg-transparent outline-none w-full">
                                 <button @click="removePlan(i)" class="text-xs opacity-10">✕</button>
                             </div>
-                            <input v-model="p.mapLink" placeholder="📍 地點名稱 (用於地圖定位)" class="input-box bg-[#f9f9f9]">
-                            <input v-model="p.food" placeholder="🍱 美食行程..." class="input-box bg-[#f9f9f9]">
-                            <textarea v-model="p.note" placeholder="詳細備註..." class="input-box h-16 resize-none opacity-60 text-left"></textarea>
+                            
+                            <div class="flex items-center bg-[#f9f9f9] rounded-xl px-3 border border-black/5">
+                                <span class="icon-prefix">📍</span>
+                                <input v-model="p.mapLink" placeholder="地點名稱 (自動連動地圖)" class="bg-transparent py-2 w-full text-sm outline-none">
+                                <a v-if="p.mapLink" :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.mapLink)" target="_blank" class="text-[10px] text-blue-400 ml-1">Go</a>
+                            </div>
+
+                            <div class="flex items-center bg-[#f9f9f9] rounded-xl px-3 border border-black/5">
+                                <span class="icon-prefix">🍱</span>
+                                <input v-model="p.food" placeholder="預計美食..." class="bg-transparent py-2 w-full text-sm outline-none">
+                            </div>
+
+                            <textarea v-model="p.note" placeholder="備註..." class="input-box h-16 resize-none opacity-60 text-left bg-[#f9f9f9]"></textarea>
                         </div>
                     </div>
                     <button @click="addPlan" class="w-full py-5 rounded-2xl border-2 border-dashed border-white/60 text-[10px] font-bold opacity-40">+ ADD NEW PLAN</button>
-                    <div class="pt-10 text-center"><button @click="isSetup = false" class="text-[10px] opacity-30 border-b border-black/10">重新設定</button></div>
+                    <div class="pt-10 text-center"><button @click="isSetup = false" class="text-[10px] opacity-30 border-b border-black/10">重新設定旅程</button></div>
                 </div>
 
                 <div v-show="tab === 'map'" class="space-y-4">
                     <div id="map"></div>
-                    <p class="text-[10px] opacity-40 text-center">地圖將自動標註當天行程中有輸入「地點名稱」的位置</p>
+                    <p class="text-[10px] opacity-40 text-center">自動釘選當天所有地點，藍色點為您的位置</p>
                 </div>
 
                 <div v-if="tab === 'finance'" class="card-muji p-8 space-y-6">
                     <div class="space-y-4">
                         <div class="flex justify-between items-center bg-white/40 p-4 rounded-2xl">
-                            <span class="text-xs font-bold">目前匯率 (1 外幣 = ? 台幣)</span>
-                            <input type="number" v-model="finance.rate" class="w-20 text-right bg-transparent border-b border-black/20 outline-none">
+                            <span class="text-xs font-bold">匯率換算 (1 外幣 = ? 台幣)</span>
+                            <input type="number" v-model="finance.rate" class="w-20 text-right bg-transparent border-b border-black/20 outline-none font-bold text-mocha">
                         </div>
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="bg-white/40 p-4 rounded-2xl">
-                                <label class="text-[9px] font-bold opacity-40 block">輸入外幣金額</label>
-                                <input type="number" v-model="finance.amount" class="w-full bg-transparent text-xl font-bold outline-none">
+                            <div class="bg-white/40 p-4 rounded-2xl text-center">
+                                <label class="text-[9px] font-bold opacity-40 block mb-1">輸入外幣金額</label>
+                                <input type="number" v-model="finance.amount" class="w-full bg-transparent text-xl font-black outline-none text-center">
                             </div>
-                            <div class="bg-white/40 p-4 rounded-2xl">
-                                <label class="text-[9px] font-bold opacity-40 block">平分人數</label>
-                                <input type="number" v-model="finance.ppl" class="w-full bg-transparent text-xl font-bold outline-none">
+                            <div class="bg-white/40 p-4 rounded-2xl text-center">
+                                <label class="text-[9px] font-bold opacity-40 block mb-1">平分人數</label>
+                                <input type="number" v-model="finance.ppl" class="w-full bg-transparent text-xl font-black outline-none text-center">
                             </div>
                         </div>
                     </div>
-                    <div class="bg-[#333] p-10 rounded-[30px] text-center text-white shadow-2xl">
-                        <p class="text-[10px] font-bold opacity-50 uppercase mb-2">Total Amount (TWD)</p>
-                        <p class="text-4xl font-black italic mb-2">NT$ {{ (finance.amount * finance.rate).toLocaleString() }}</p>
+                    <div class="bg-[#333] p-10 rounded-[30px] text-center text-white shadow-2xl relative overflow-hidden">
+                        <p class="text-[10px] font-bold opacity-50 uppercase mb-2 tracking-[0.2em]">Total Amount (TWD)</p>
+                        <p class="text-4xl font-black italic mb-2">NT$ {{ Math.round(finance.amount * finance.rate).toLocaleString() }}</p>
                         <div class="h-[1px] bg-white/10 my-4"></div>
                         <p class="text-[10px] font-bold opacity-50 uppercase mb-1">Per Person</p>
                         <p class="text-2xl font-bold text-[#bda38f]">NT$ {{ Math.round((finance.amount * finance.rate) / finance.ppl).toLocaleString() }}</p>
@@ -150,7 +172,7 @@
         const firebaseConfig = { apiKey: "AIzaSyAxZx7UnDg25ZcMDiTJRhSdwkiEApsVHjc", authDomain: "europe-trip-app.firebaseapp.com", databaseURL: "https://europe-trip-app-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "europe-trip-app" };
         const fApp = initializeApp(firebaseConfig);
         const db = getDatabase(fApp);
-        const dbRef = ref(db, 'trip_v8_pro');
+        const dbRef = ref(db, 'trip_final_pro_v9');
 
         const { createApp, ref: vueRef, computed, watch } = Vue;
 
@@ -201,36 +223,42 @@
                     return itineraryData.value[key];
                 });
 
-                const addPlan = () => currentPlans.value.push({ ampm: '上午', time: '09:00', transport: '🚗 交通', loc: '', mapLink: '', food: '', note: '' });
+                const addPlan = () => currentPlans.value.push({ ampm: '上午', time: '00:00', transport: '🚗 交通', loc: '', mapLink: '', food: '', note: '' });
                 const removePlan = (idx) => currentPlans.value.splice(idx, 1);
 
-                let map;
+                let map, markerLayer;
                 const updateMapMarkers = async () => {
                     tab.value = 'map';
                     setTimeout(async () => {
                         if (!map) {
                             map = L.map('map').setView([35.6895, 139.6917], 13);
                             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                            markerLayer = L.layerGroup().addTo(map);
                         }
-                        // 獲取當前位置
+                        markerLayer.clearLayers();
+
+                        // 藍色點代表現在位置
                         navigator.geolocation.getCurrentPosition(pos => {
                             const cur = [pos.coords.latitude, pos.coords.longitude];
-                            L.marker(cur, {icon: L.divIcon({html: '🔵', className: 'text-2xl'})}).addTo(map).bindPopup("你的位置");
-                            map.setView(cur, 12);
+                            L.circleMarker(cur, { radius: 8, color: '#4A90E2', fillColor: '#4A90E2', fillOpacity: 0.8 }).addTo(markerLayer).bindPopup("您的位置");
                         });
 
-                        // 釘選行程地點
+                        // 釘選當天行程地點
+                        const bounds = [];
                         for (let p of currentPlans.value) {
                             if (p.mapLink) {
                                 try {
                                     const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(p.mapLink)}`);
                                     const data = await res.json();
                                     if (data[0]) {
-                                        L.marker([data[0].lat, data[0].lon]).addTo(map).bindPopup(p.loc || p.mapLink);
+                                        const latlng = [data[0].lat, data[0].lon];
+                                        L.marker(latlng).addTo(markerLayer).bindPopup(`<b>${p.loc || '地點'}</b><br>${p.mapLink}`);
+                                        bounds.push(latlng);
                                     }
-                                } catch (e) { console.log("Geocoding error"); }
+                                } catch (e) { console.error(e); }
                             }
                         }
+                        if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
                     }, 400);
                 };
 

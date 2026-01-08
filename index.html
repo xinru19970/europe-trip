@@ -9,53 +9,41 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root {
-            --mocha: #bda38f;
-            --latte: #e8e2d6; 
-            --dark-text: #433422;
-            --deep-banner: #333333;
-        }
-        body { background-color: var(--latte); color: var(--dark-text); font-family: -apple-system, sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
+        :root { --mocha: #bda38f; --latte: #e8e2d6; --dark-text: #433422; --deep-banner: #333333; }
+        body { background-color: var(--latte); color: var(--dark-text); font-family: -apple-system, sans-serif; margin: 0; padding: 0; }
         [v-cloak] { display: none; }
         .card-muji { background: rgba(255, 255, 255, 0.85); border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
         .status-banner { background: var(--deep-banner); color: white; border-radius: 20px; padding: 24px; }
         .timeline-line { position: absolute; left: 42px; top: 0; bottom: 0; width: 1px; background: rgba(67, 52, 34, 0.15); z-index: 0; }
-        .input-box { background: #ffffff; border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 14px; border: 1px solid rgba(0,0,0,0.05); outline: none; }
         
-        /* 時間輸入顏色控制 */
-        .time-input { color: #bbbbbb; text-align: center; font-weight: bold; width: 100%; background: transparent; border: none; outline: none; }
+        /* 時間輸入：四位碼格式 */
+        .time-input { color: #bbbbbb; text-align: center; font-weight: bold; width: 100%; background: transparent; border: none; outline: none; font-size: 16px; letter-spacing: 1px; }
         .time-input.active { color: var(--dark-text); }
         
         .time-badge { background: white; border-radius: 14px; width: 84px; padding: 10px 4px; text-align: center; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .select-transport { background: white; border-radius: 8px; font-size: 11px; padding: 4px; text-align: center; width: 84px; margin-top: 8px; border: 1px solid rgba(0,0,0,0.05); outline: none; }
-        #map { height: 350px; border-radius: 24px; border: 6px solid white; width: 100%; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .input-box { background: #ffffff; border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 14px; border: 1px solid rgba(0,0,0,0.05); outline: none; }
+        #map { height: 350px; border-radius: 24px; border: 6px solid white; width: 100%; z-index: 10; }
+        .loc-tag { background: #eee; padding: 4px 10px; border-radius: 10px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+        .loc-tag:hover { background: #333; color: white; }
     </style>
 </head>
 <body>
     <div id="app" v-cloak>
         <div v-if="!isSetup" class="fixed inset-0 z-[100] bg-[#e8e2d6] flex flex-col items-center justify-center px-8">
-            <div class="card-muji w-full max-w-sm p-10 space-y-6">
-                <div class="text-center">
-                    <h1 class="text-2xl font-bold tracking-tight">Travel Planner</h1>
-                    <p class="text-[10px] opacity-40 uppercase tracking-[0.2em] mt-2">開啟您的旅程</p>
-                </div>
+            <div class="card-muji w-full max-w-sm p-10 space-y-6 text-center">
+                <h1 class="text-2xl font-bold">Travel Planner</h1>
                 <div class="space-y-4">
-                    <input v-model="setup.destination" placeholder="目的地 (例如：東京)" class="input-box py-4 text-center">
+                    <input v-model="setup.destination" placeholder="目的地 (如: Tokyo)" class="input-box py-4 text-center">
                     <div class="grid grid-cols-2 gap-3">
                         <input type="date" v-model="setup.startDate" class="input-box text-xs">
                         <input type="date" v-model="setup.endDate" class="input-box text-xs">
                     </div>
-                    <div class="bg-[#f2e8df] p-4 rounded-xl text-center text-sm">
-                        <span class="opacity-60 italic">Number of days:</span>
-                        <span class="text-xl font-black ml-2 text-[#5e503f]">{{ totalDays }}</span>
-                    </div>
-                    <button @click="finishSetup" class="w-full py-4 bg-[#333333] text-white rounded-xl font-bold tracking-widest active:scale-95 transition-all">START JOURNEY</button>
+                    <button @click="finishSetup" class="w-full py-4 bg-[#333] text-white rounded-xl font-bold">START JOURNEY</button>
                 </div>
             </div>
         </div>
 
-        <div v-else class="max-w-md mx-auto min-h-screen">
+        <div v-else class="max-w-md mx-auto">
             <div class="px-6 pt-8">
                 <div class="status-banner flex justify-between items-center shadow-xl">
                     <div>
@@ -71,8 +59,7 @@
 
             <div class="flex overflow-x-auto px-6 space-x-3 no-scrollbar my-6">
                 <div v-for="d in totalDays" :key="d" @click="selectedDay = d"
-                     :class="['flex-shrink-0 w-12 h-16 flex flex-col items-center justify-center rounded-2xl bg-white/40 transition-all', { 'bg-[#333333] text-white shadow-lg': selectedDay === d }]">
-                    <span class="text-[8px] font-bold opacity-40">Day</span>
+                     :class="['flex-shrink-0 w-12 h-16 flex flex-col items-center justify-center rounded-2xl bg-white/40', { 'bg-[#333] text-white shadow-lg': selectedDay === d }]">
                     <span class="text-lg font-bold">{{ d }}</span>
                 </div>
             </div>
@@ -89,24 +76,20 @@
                     <div v-for="(p, i) in currentPlans" :key="i" class="relative flex items-start space-x-6">
                         <div class="flex flex-col items-center">
                             <div class="time-badge">
-                                <select v-model="p.ampm" class="text-[10px] font-black block w-full outline-none text-center bg-transparent">
+                                <select v-model="p.ampm" class="text-[10px] font-black block w-full text-center bg-transparent outline-none">
                                     <option value="上午">上午</option><option value="下午">下午</option>
                                 </select>
-                                <input type="text" v-model="p.time" 
-                                       @input="p.timeEdited = true"
-                                       :class="['time-input mt-1', { 'active': p.timeEdited || p.time !== '00:00' }]">
+                                <input type="text" v-model="p.time" maxlength="4"
+                                       @focus="if(p.time === '00:00') p.time = ''"
+                                       @blur="formatTime(p)"
+                                       :class="['time-input mt-1', { 'active': p.time !== '00:00' }]">
                             </div>
-                            <select v-model="p.transport" class="select-transport">
-                                <option value="🚗 交通">🚗 交通</option><option value="🚇 地鐵">🚇 地鐵</option>
-                                <option value="🚄 JR">🚄 JR</option><option value="🚌 公車">🚌 公車</option>
-                                <option value="🚶 步行">🚶 步行</option><option value="🚕 計程車">🚕 計程車</option>
+                            <select v-model="p.transport" class="text-[10px] mt-2 bg-white rounded p-1 outline-none">
+                                <option>🚗 交通</option><option>🚇 地鐵</option><option>🚄 JR</option><option>🚶 步行</option>
                             </select>
                         </div>
                         <div class="card-muji flex-grow p-5 space-y-4">
-                            <div class="flex justify-between items-start">
-                                <input v-model="p.loc" placeholder="行程標題..." class="text-base font-bold bg-transparent outline-none w-full">
-                                <button @click="removePlan(i)" class="text-xs opacity-10">✕</button>
-                            </div>
+                            <input v-model="p.loc" placeholder="行程標題" class="text-base font-bold bg-transparent outline-none w-full">
                             <div class="flex items-center bg-[#f9f9f9] rounded-xl px-3 border border-black/5">
                                 <span class="text-sm mr-2">📍</span>
                                 <input v-model="p.mapLink" placeholder="地點名稱" class="bg-transparent py-2 w-full text-sm outline-none">
@@ -115,40 +98,34 @@
                                 <span class="text-sm mr-2">🍱</span>
                                 <input v-model="p.food" placeholder="美食安排" class="bg-transparent py-2 w-full text-sm outline-none">
                             </div>
-                            <textarea v-model="p.note" placeholder="詳細備註..." class="input-box h-16 resize-none opacity-60 text-left bg-[#f9f9f9]"></textarea>
+                            <textarea v-model="p.note" placeholder="備註..." class="input-box h-16 bg-[#f9f9f9] text-xs resize-none"></textarea>
                         </div>
                     </div>
-                    <button @click="addPlan" class="w-full py-5 rounded-2xl border-2 border-dashed border-white/60 text-[10px] font-bold opacity-40">+ ADD NEW PLAN</button>
-                    <div class="pt-10 text-center"><button @click="resetSetup" class="text-[10px] opacity-30 border-b border-black/10">重新設定旅程目的地</button></div>
+                    <button @click="addPlan" class="w-full py-5 rounded-2xl border-2 border-dashed border-white/60 text-[10px] font-bold opacity-40">+ ADD PLAN</button>
                 </div>
 
                 <div v-show="tab === 'map'" class="space-y-4">
                     <div id="map"></div>
-                    <p class="text-[10px] opacity-40 text-center italic">自動標註當天行程地點</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span v-for="p in currentPlans" v-if="p.mapLink" @click="focusLocation(p.mapLink)" class="loc-tag">
+                            📍 {{ p.loc || p.mapLink }}
+                        </span>
+                    </div>
                 </div>
 
                 <div v-if="tab === 'finance'" class="card-muji p-8 space-y-6">
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center bg-white/40 p-4 rounded-2xl">
-                            <span class="text-xs font-bold">匯率換算 (1 外幣 = ? 台幣)</span>
-                            <input type="number" v-model="finance.rate" class="w-20 text-right bg-transparent border-b border-black/20 outline-none font-bold text-[#bda38f]">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white/40 p-4 rounded-2xl">
+                            <label class="text-[9px] font-bold opacity-40 block">匯率</label>
+                            <input type="number" v-model="finance.rate" class="w-full bg-transparent font-bold outline-none">
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="bg-white/40 p-4 rounded-2xl text-center">
-                                <label class="text-[9px] font-bold opacity-40 block mb-1">輸入外幣金額</label>
-                                <input type="number" v-model="finance.amount" class="w-full bg-transparent text-xl font-black outline-none text-center">
-                            </div>
-                            <div class="bg-white/40 p-4 rounded-2xl text-center">
-                                <label class="text-[9px] font-bold opacity-40 block mb-1">平分人數</label>
-                                <input type="number" v-model="finance.ppl" class="w-full bg-transparent text-xl font-black outline-none text-center">
-                            </div>
+                        <div class="bg-white/40 p-4 rounded-2xl">
+                            <label class="text-[9px] font-bold opacity-40 block">外幣金額</label>
+                            <input type="number" v-model="finance.amount" class="w-full bg-transparent font-bold outline-none">
                         </div>
                     </div>
-                    <div class="bg-[#333] p-10 rounded-[30px] text-center text-white shadow-2xl">
-                        <p class="text-[10px] font-bold opacity-50 uppercase mb-2">Total Amount (TWD)</p>
-                        <p class="text-4xl font-black italic mb-2">NT$ {{ Math.round(finance.amount * finance.rate).toLocaleString() }}</p>
-                        <div class="h-[1px] bg-white/10 my-4"></div>
-                        <p class="text-2xl font-bold text-[#bda38f]">每人 NT$ {{ Math.round((finance.amount * finance.rate) / finance.ppl).toLocaleString() }}</p>
+                    <div class="bg-[#333] p-10 rounded-[30px] text-center text-white">
+                        <p class="text-4xl font-black italic">NT$ {{ Math.round(finance.amount * finance.rate).toLocaleString() }}</p>
                     </div>
                 </div>
             </main>
@@ -157,57 +134,26 @@
 
     <script>
         const { createApp, ref, computed, watch, onMounted } = Vue;
-
         createApp({
             setup() {
-                const isSetup = ref(false);
-                const tab = ref('list');
-                const selectedDay = ref(1);
+                const isSetup = ref(false); const tab = ref('list'); const selectedDay = ref(1);
                 const setup = ref({ destination: '', startDate: '', endDate: '' });
                 const weather = ref({ temp: '--', desc: 'Loading' });
                 const finance = ref({ amount: 0, rate: 0.22, ppl: 2 });
                 const itineraryData = ref({});
 
-                // 從 localStorage 讀取舊資料
                 onMounted(() => {
-                    const saved = localStorage.getItem('myTripData');
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        itineraryData.value = parsed.itinerary || {};
-                        setup.value = parsed.setup || setup.value;
-                        if (setup.value.destination) isSetup.value = true;
-                        fetchWeather();
+                    const saved = localStorage.getItem('tripData_v10');
+                    if(saved) { 
+                        const p = JSON.parse(saved); 
+                        itineraryData.value = p.itinerary || {}; setup.value = p.setup || setup.value;
+                        if(setup.value.destination) { isSetup.value = true; fetchWeather(); }
                     }
                 });
 
-                // 自動儲存到 localStorage
-                watch([itineraryData, setup, finance], () => {
-                    localStorage.setItem('myTripData', JSON.stringify({
-                        itinerary: itineraryData.value,
-                        setup: setup.value
-                    }));
+                watch([itineraryData, setup], () => {
+                    localStorage.setItem('tripData_v10', JSON.stringify({ itinerary: itineraryData.value, setup: setup.value }));
                 }, { deep: true });
-
-                const totalDays = computed(() => {
-                    if (!setup.value.startDate || !setup.value.endDate) return 1;
-                    const s = new Date(setup.value.startDate);
-                    const e = new Date(setup.value.endDate);
-                    return Math.max(1, Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24)) + 1);
-                });
-
-                const formattedDate = computed(() => {
-                    if (!setup.value.startDate) return '';
-                    const d = new Date(setup.value.startDate);
-                    d.setDate(d.getDate() + (selectedDay.value - 1));
-                    return `${d.getMonth() + 1}/${d.getDate()}`;
-                });
-
-                const currentDayName = computed(() => {
-                    if (!setup.value.startDate) return '';
-                    const d = new Date(setup.value.startDate);
-                    d.setDate(d.getDate() + (selectedDay.value - 1));
-                    return '星期' + ['日','一','二','三','四','五','六'][d.getDay()];
-                });
 
                 const fetchWeather = async () => {
                     if (!setup.value.destination) return;
@@ -215,11 +161,18 @@
                         const res = await fetch(`https://wttr.in/${encodeURIComponent(setup.value.destination)}?format=j1`);
                         const data = await res.json();
                         weather.value = { temp: data.current_condition[0].temp_C, desc: data.current_condition[0].weatherDesc[0].value };
-                    } catch (e) { weather.value = { temp: '15', desc: 'Sunny' }; }
+                    } catch (e) { weather.value = { temp: '--', desc: 'Offline' }; }
                 };
 
                 const finishSetup = () => { if(setup.value.destination) { isSetup.value = true; fetchWeather(); } };
-                const resetSetup = () => { isSetup.value = false; };
+
+                // 時間格式處理：強制四位碼
+                const formatTime = (p) => {
+                    let val = p.time.replace(/\D/g, '');
+                    if (val.length === 0) p.time = '00:00';
+                    else if (val.length <= 2) p.time = val.padStart(2, '0') + ':00';
+                    else p.time = val.slice(0, 2) + ':' + val.slice(2, 4).padEnd(2, '0');
+                };
 
                 const currentPlans = computed(() => {
                     const key = `day_${selectedDay.value}`;
@@ -227,30 +180,23 @@
                     return itineraryData.value[key];
                 });
 
-                const addPlan = () => currentPlans.value.push({ ampm: '上午', time: '00:00', timeEdited: false, transport: '🚗 交通', loc: '', mapLink: '', food: '', note: '' });
-                const removePlan = (idx) => currentPlans.value.splice(idx, 1);
+                const addPlan = () => currentPlans.value.push({ ampm: '上午', time: '00:00', loc: '', mapLink: '', food: '', note: '' });
 
                 let map, markers = [];
                 const updateMapMarkers = () => {
                     setTimeout(() => {
                         if (!map) {
-                            map = L.map('map').setView([25.0339, 121.5644], 13);
+                            map = L.map('map').setView([20, 0], 2);
                             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                         }
-                        markers.forEach(m => map.removeLayer(m));
-                        markers = [];
-
-                        // 抓取當天地點定位 (模擬打點)
-                        currentPlans.value.forEach((p, idx) => {
+                        markers.forEach(m => map.removeLayer(m)); markers = [];
+                        currentPlans.value.forEach(p => {
                             if (p.mapLink) {
-                                // 這裡使用 OpenStreetMap 搜尋功能
                                 fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(p.mapLink)}`)
-                                    .then(r => r.json())
-                                    .then(data => {
+                                    .then(r => r.json()).then(data => {
                                         if (data[0]) {
                                             const m = L.marker([data[0].lat, data[0].lon]).addTo(map).bindPopup(p.loc || p.mapLink);
                                             markers.push(m);
-                                            if (idx === 0) map.panTo([data[0].lat, data[0].lon]);
                                         }
                                     });
                             }
@@ -258,7 +204,32 @@
                     }, 300);
                 };
 
-                return { isSetup, setup, totalDays, tab, selectedDay, finance, itineraryData, currentPlans, weather, formattedDate, currentDayName, finishSetup, resetSetup, addPlan, removePlan, updateMapMarkers };
+                const focusLocation = (locName) => {
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locName)}`)
+                        .then(r => r.json()).then(data => {
+                            if (data[0]) map.flyTo([data[0].lat, data[0].lon], 15);
+                        });
+                };
+
+                const totalDays = computed(() => {
+                    if (!setup.value.startDate || !setup.value.endDate) return 1;
+                    const s = new Date(setup.value.startDate); const e = new Date(setup.value.endDate);
+                    return Math.max(1, Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24)) + 1);
+                });
+
+                const formattedDate = computed(() => {
+                    if (!setup.value.startDate) return '';
+                    const d = new Date(setup.value.startDate); d.setDate(d.getDate() + (selectedDay.value - 1));
+                    return `${d.getMonth() + 1}/${d.getDate()}`;
+                });
+
+                const currentDayName = computed(() => {
+                    if (!setup.value.startDate) return '';
+                    const d = new Date(setup.value.startDate); d.setDate(d.getDate() + (selectedDay.value - 1));
+                    return ['日','一','二','三','四','五','六'][d.getDay()];
+                });
+
+                return { isSetup, setup, totalDays, tab, selectedDay, finance, itineraryData, currentPlans, weather, formattedDate, currentDayName, finishSetup, addPlan, formatTime, updateMapMarkers, focusLocation };
             }
         }).mount('#app');
     </script>

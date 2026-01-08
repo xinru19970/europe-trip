@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Travel Planner Pro</title>
+    <title>My Travel Pro</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -15,26 +15,32 @@
         .card-muji { background: rgba(255, 255, 255, 0.85); border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
         .status-banner { background: var(--deep-banner); color: white; border-radius: 20px; padding: 24px; }
         .timeline-line { position: absolute; left: 42px; top: 0; bottom: 0; width: 1px; background: rgba(67, 52, 34, 0.15); z-index: 0; }
+        
+        /* 時間格式優化 */
         .time-input { color: #bbbbbb; text-align: center; font-weight: bold; width: 100%; background: transparent; border: none; outline: none; font-size: 16px; }
         .time-input.active { color: var(--dark-text); }
         .time-badge { background: white; border-radius: 14px; width: 84px; padding: 10px 4px; text-align: center; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        
         .input-box { background: #ffffff; border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 14px; border: 1px solid rgba(0,0,0,0.05); outline: none; }
-        #map { height: 350px; border-radius: 24px; border: 6px solid white; width: 100%; }
-        .loc-tag { background: white; padding: 6px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); }
+        #map { height: 300px; border-radius: 20px; border: 4px solid white; width: 100%; }
+        .loc-item { cursor: pointer; transition: 0.2s; }
+        .loc-item:active { transform: scale(0.98); opacity: 0.8; }
     </style>
 </head>
 <body>
     <div id="app" v-cloak>
         <div v-if="!isSetup" class="fixed inset-0 z-[100] bg-[#e8e2d6] flex flex-col items-center justify-center px-8">
-            <div class="card-muji w-full max-w-sm p-10 space-y-6 text-center">
-                <h1 class="text-2xl font-bold">Travel Planner</h1>
+            <div class="card-muji w-full max-w-sm p-10 space-y-6">
+                <div class="text-center">
+                    <h1 class="text-2xl font-bold">Travel Planner</h1>
+                </div>
                 <div class="space-y-4">
                     <input v-model="setup.destination" placeholder="目的地 (如: Tokyo)" class="input-box py-4 text-center">
                     <div class="grid grid-cols-2 gap-3">
                         <input type="date" v-model="setup.startDate" class="input-box text-xs">
                         <input type="date" v-model="setup.endDate" class="input-box text-xs">
                     </div>
-                    <button @click="finishSetup" class="w-full py-4 bg-[#333] text-white rounded-xl font-bold">START JOURNEY</button>
+                    <button @click="finishSetup" class="w-full py-4 bg-[#333] text-white rounded-xl font-bold">START</button>
                 </div>
             </div>
         </div>
@@ -43,12 +49,12 @@
             <div class="px-6 pt-8">
                 <div class="status-banner flex justify-between items-center shadow-xl">
                     <div>
-                        <h2 class="text-2xl font-bold">{{ formattedDate }} ({{ currentDayName }})</h2>
+                        <h2 class="text-2xl font-bold">{{ formattedDate }}</h2>
                         <p class="text-xs opacity-70 mt-1 uppercase">📍 {{ setup.destination }}</p>
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-black">{{ weather.temp }}°C</div>
-                        <p class="text-[10px] font-bold opacity-70">{{ weather.desc }}</p>
+                        <p class="text-[10px] font-bold opacity-70 uppercase">{{ weather.desc }}</p>
                     </div>
                 </div>
             </div>
@@ -67,34 +73,33 @@
                     <button @click="tab = 'finance'" :class="tab === 'finance' ? 'opacity-100 border-b-2 border-[#333]' : 'opacity-20'">分帳</button>
                 </div>
 
-                <div v-if="tab === 'list'" class="space-y-12 relative">
+                <div v-if="tab === 'list'" class="space-y-10 relative">
                     <div class="timeline-line"></div>
-                    <div v-for="(p, i) in currentPlans" :key="i" class="relative flex items-start space-x-6">
-                        <div class="flex flex-col items-center">
+                    <div v-for="(p, i) in currentPlans" :key="i" class="relative flex items-start space-x-6 loc-item" @click="tab = 'map'; updateMapMarkers(p.mapLink)">
+                        <div class="flex flex-col items-center" @click.stop>
                             <div class="time-badge">
                                 <select v-model="p.ampm" class="text-[10px] font-black block w-full text-center bg-transparent outline-none">
                                     <option value="上午">上午</option><option value="下午">下午</option>
                                 </select>
-                                <input type="text" v-model="p.time" maxlength="4"
+                                <input type="text" v-model="p.time" maxlength="4" placeholder="0000"
                                        @focus="if(p.time === '00:00') p.time = ''"
-                                       @blur="handleTimeBlur(p)"
+                                       @blur="formatTime(p)"
                                        :class="['time-input mt-1', { 'active': p.time !== '00:00' }]">
                             </div>
                             <select v-model="p.transport" class="text-[10px] mt-2 bg-white rounded p-1 outline-none">
                                 <option>🚗 交通</option><option>🚇 地鐵</option><option>🚄 JR</option><option>🚶 步行</option>
                             </select>
                         </div>
-                        <div class="card-muji flex-grow p-5 space-y-4">
+                        <div class="card-muji flex-grow p-5 space-y-4" @click.stop>
                             <input v-model="p.loc" placeholder="行程標題" class="text-base font-bold bg-transparent outline-none w-full">
                             <div class="flex items-center bg-[#f9f9f9] rounded-xl px-3 border border-black/5">
                                 <span class="text-sm mr-2">📍</span>
-                                <input v-model="p.mapLink" placeholder="地點名稱" class="bg-transparent py-2 w-full text-sm outline-none">
+                                <input v-model="p.mapLink" placeholder="輸入地點並點擊卡片跳轉地圖" class="bg-transparent py-2 w-full text-sm outline-none">
                             </div>
                             <div class="flex items-center bg-[#f9f9f9] rounded-xl px-3 border border-black/5">
                                 <span class="text-sm mr-2">🍱</span>
-                                <input v-model="p.food" placeholder="美食安排" class="bg-transparent py-2 w-full text-sm outline-none">
+                                <input v-model="p.food" placeholder="美食" class="bg-transparent py-2 w-full text-sm outline-none">
                             </div>
-                            <textarea v-model="p.note" placeholder="備註..." class="input-box h-16 bg-[#f9f9f9] text-xs resize-none text-left"></textarea>
                         </div>
                     </div>
                     <button @click="addPlan" class="w-full py-5 rounded-2xl border-2 border-dashed border-white/60 text-[10px] font-bold opacity-40">+ ADD PLAN</button>
@@ -102,11 +107,7 @@
 
                 <div v-show="tab === 'map'" class="space-y-4">
                     <div id="map"></div>
-                    <div class="flex flex-wrap gap-2">
-                        <div v-for="p in currentPlans" v-if="p.mapLink" @click="focusLocation(p.mapLink)" class="loc-tag">
-                            📍 {{ p.loc || p.mapLink }}
-                        </div>
-                    </div>
+                    <p class="text-[10px] opacity-40 text-center">點擊列表行程可即時更新定位</p>
                 </div>
 
                 <div v-if="tab === 'finance'" class="card-muji p-8 space-y-6">
@@ -121,7 +122,6 @@
                         </div>
                     </div>
                     <div class="bg-[#333] p-10 rounded-[30px] text-center text-white">
-                        <p class="text-[10px] opacity-50 uppercase mb-2">Total TWD</p>
                         <p class="text-4xl font-black italic">NT$ {{ Math.round(finance.amount * finance.rate).toLocaleString() }}</p>
                     </div>
                 </div>
@@ -137,7 +137,7 @@
                     tab: 'list',
                     selectedDay: 1,
                     setup: { destination: '', startDate: '', endDate: '' },
-                    weather: { temp: '--', desc: '抓取中' },
+                    weather: { temp: '--', desc: 'Loading' },
                     finance: { amount: 0, rate: 0.22 },
                     itineraryData: {},
                     map: null,
@@ -157,12 +157,6 @@
                     d.setDate(d.getDate() + (this.selectedDay - 1));
                     return (d.getMonth() + 1) + '/' + d.getDate();
                 },
-                currentDayName() {
-                    if (!this.setup.startDate) return '';
-                    const d = new Date(this.setup.startDate);
-                    d.setDate(d.getDate() + (this.selectedDay - 1));
-                    return '星期' + ['日','一','二','三','四','五','六'][d.getDay()];
-                },
                 currentPlans() {
                     const key = 'day_' + this.selectedDay;
                     if (!this.itineraryData[key]) this.itineraryData[key] = [];
@@ -176,18 +170,18 @@
                         this.fetchWeather();
                     }
                 },
-                async fetchWeather() {
-                    try {
-                        const res = await fetch('https://wttr.in/' + encodeURIComponent(this.setup.destination) + '?format=j1');
-                        const data = await res.json();
-                        this.weather.temp = data.current_condition[0].temp_C;
-                        this.weather.desc = data.current_condition[0].weatherDesc[0].value;
-                    } catch (e) {
-                        this.weather.temp = '15';
-                        this.weather.desc = 'Sunny';
-                    }
+                fetchWeather() {
+                    const self = this;
+                    fetch('https://wttr.in/' + encodeURIComponent(this.setup.destination) + '?format=j1')
+                    .then(r => r.json())
+                    .then(data => {
+                        self.weather.temp = data.current_condition[0].temp_C;
+                        self.weather.desc = data.current_condition[0].weatherDesc[0].value;
+                    }).catch(() => {
+                        self.weather.temp = '22'; self.weather.desc = 'Cloudy';
+                    });
                 },
-                handleTimeBlur(p) {
+                formatTime(p) {
                     let val = p.time.replace(/\D/g, '');
                     if (val.length === 0) p.time = '00:00';
                     else if (val.length <= 2) p.time = val.padStart(2, '0') + ':00';
@@ -196,51 +190,42 @@
                 addPlan() {
                     this.currentPlans.push({ ampm: '上午', time: '00:00', loc: '', mapLink: '', food: '', note: '', transport: '🚗 交通' });
                 },
-                updateMapMarkers() {
+                updateMapMarkers(focusTarget) {
+                    const self = this;
                     setTimeout(() => {
-                        if (!this.map) {
-                            this.map = L.map('map').setView([20, 0], 2);
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
+                        if (!self.map) {
+                            self.map = L.map('map').setView([20, 0], 2);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(self.map);
                         }
-                        this.markers.forEach(m => this.map.removeLayer(m));
-                        this.markers = [];
-                        this.currentPlans.forEach(p => {
+                        self.markers.forEach(m => self.map.removeLayer(m));
+                        self.markers = [];
+                        
+                        self.currentPlans.forEach(p => {
                             if (p.mapLink) {
                                 fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(p.mapLink))
-                                    .then(r => r.json()).then(data => {
-                                        if (data[0]) {
-                                            const m = L.marker([data[0].lat, data[0].lon]).addTo(this.map).bindPopup(p.loc || p.mapLink);
-                                            this.markers.push(m);
-                                        }
-                                    });
+                                .then(r => r.json()).then(data => {
+                                    if (data[0]) {
+                                        const m = L.marker([data[0].lat, data[0].lon]).addTo(self.map);
+                                        self.markers.push(m);
+                                        if(focusTarget === p.mapLink) self.map.flyTo([data[0].lat, data[0].lon], 15);
+                                    }
+                                });
                             }
                         });
-                    }, 300);
-                },
-                focusLocation(locName) {
-                    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(locName))
-                        .then(r => r.json()).then(data => {
-                            if (data[0]) this.map.flyTo([data[0].lat, data[0].lon], 15);
-                        });
+                    }, 100);
                 }
             },
             mounted() {
-                const saved = localStorage.getItem('tripData_final');
+                const saved = localStorage.getItem('trip_v11');
                 if(saved) {
                     const p = JSON.parse(saved);
                     this.itineraryData = p.itinerary || {};
                     this.setup = p.setup || this.setup;
-                    if(this.setup.destination) {
-                        this.isSetup = true;
-                        this.fetchWeather();
-                    }
+                    if(this.setup.destination) { this.isSetup = true; this.fetchWeather(); }
                 }
             },
             updated() {
-                localStorage.setItem('tripData_final', JSON.stringify({
-                    itinerary: this.itineraryData,
-                    setup: this.setup
-                }));
+                localStorage.setItem('trip_v11', JSON.stringify({ itinerary: this.itineraryData, setup: this.setup }));
             }
         });
         app.mount('#app');

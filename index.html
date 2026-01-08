@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Travel Pro</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <title>Travel Planner Pro</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -15,16 +15,12 @@
         .card-muji { background: rgba(255, 255, 255, 0.85); border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
         .status-banner { background: var(--deep-banner); color: white; border-radius: 20px; padding: 24px; }
         .timeline-line { position: absolute; left: 42px; top: 0; bottom: 0; width: 1px; background: rgba(67, 52, 34, 0.15); z-index: 0; }
-        
-        /* 時間輸入：四位碼格式 */
-        .time-input { color: #bbbbbb; text-align: center; font-weight: bold; width: 100%; background: transparent; border: none; outline: none; font-size: 16px; letter-spacing: 1px; }
+        .time-input { color: #bbbbbb; text-align: center; font-weight: bold; width: 100%; background: transparent; border: none; outline: none; font-size: 16px; }
         .time-input.active { color: var(--dark-text); }
-        
         .time-badge { background: white; border-radius: 14px; width: 84px; padding: 10px 4px; text-align: center; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .input-box { background: #ffffff; border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 14px; border: 1px solid rgba(0,0,0,0.05); outline: none; }
-        #map { height: 350px; border-radius: 24px; border: 6px solid white; width: 100%; z-index: 10; }
-        .loc-tag { background: #eee; padding: 4px 10px; border-radius: 10px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
-        .loc-tag:hover { background: #333; color: white; }
+        #map { height: 350px; border-radius: 24px; border: 6px solid white; width: 100%; }
+        .loc-tag { background: white; padding: 6px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
@@ -43,7 +39,7 @@
             </div>
         </div>
 
-        <div v-else class="max-w-md mx-auto">
+        <div v-else class="max-w-md mx-auto min-h-screen">
             <div class="px-6 pt-8">
                 <div class="status-banner flex justify-between items-center shadow-xl">
                     <div>
@@ -52,19 +48,19 @@
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-black">{{ weather.temp }}°C</div>
-                        <p class="text-[10px] font-bold opacity-70 uppercase">{{ weather.desc }}</p>
+                        <p class="text-[10px] font-bold opacity-70">{{ weather.desc }}</p>
                     </div>
                 </div>
             </div>
 
-            <div class="flex overflow-x-auto px-6 space-x-3 no-scrollbar my-6">
+            <div class="flex overflow-x-auto px-6 space-x-3 my-6 no-scrollbar">
                 <div v-for="d in totalDays" :key="d" @click="selectedDay = d"
-                     :class="['flex-shrink-0 w-12 h-16 flex flex-col items-center justify-center rounded-2xl bg-white/40', { 'bg-[#333] text-white shadow-lg': selectedDay === d }]">
+                     :class="['flex-shrink-0 w-12 h-16 flex flex-col items-center justify-center rounded-2xl bg-white/40', { 'bg-[#333] text-white': selectedDay === d }]">
                     <span class="text-lg font-bold">{{ d }}</span>
                 </div>
             </div>
 
-            <main class="px-6 space-y-8 pb-20">
+            <main class="px-6 space-y-8 pb-24">
                 <div class="flex space-x-8 text-sm font-bold border-b border-white/30 pb-2">
                     <button @click="tab = 'list'" :class="tab === 'list' ? 'opacity-100 border-b-2 border-[#333]' : 'opacity-20'">行程</button>
                     <button @click="tab = 'map'; updateMapMarkers()" :class="tab === 'map' ? 'opacity-100 border-b-2 border-[#333]' : 'opacity-20'">地圖</button>
@@ -81,7 +77,7 @@
                                 </select>
                                 <input type="text" v-model="p.time" maxlength="4"
                                        @focus="if(p.time === '00:00') p.time = ''"
-                                       @blur="formatTime(p)"
+                                       @blur="handleTimeBlur(p)"
                                        :class="['time-input mt-1', { 'active': p.time !== '00:00' }]">
                             </div>
                             <select v-model="p.transport" class="text-[10px] mt-2 bg-white rounded p-1 outline-none">
@@ -98,7 +94,7 @@
                                 <span class="text-sm mr-2">🍱</span>
                                 <input v-model="p.food" placeholder="美食安排" class="bg-transparent py-2 w-full text-sm outline-none">
                             </div>
-                            <textarea v-model="p.note" placeholder="備註..." class="input-box h-16 bg-[#f9f9f9] text-xs resize-none"></textarea>
+                            <textarea v-model="p.note" placeholder="備註..." class="input-box h-16 bg-[#f9f9f9] text-xs resize-none text-left"></textarea>
                         </div>
                     </div>
                     <button @click="addPlan" class="w-full py-5 rounded-2xl border-2 border-dashed border-white/60 text-[10px] font-bold opacity-40">+ ADD PLAN</button>
@@ -107,16 +103,16 @@
                 <div v-show="tab === 'map'" class="space-y-4">
                     <div id="map"></div>
                     <div class="flex flex-wrap gap-2">
-                        <span v-for="p in currentPlans" v-if="p.mapLink" @click="focusLocation(p.mapLink)" class="loc-tag">
+                        <div v-for="p in currentPlans" v-if="p.mapLink" @click="focusLocation(p.mapLink)" class="loc-tag">
                             📍 {{ p.loc || p.mapLink }}
-                        </span>
+                        </div>
                     </div>
                 </div>
 
                 <div v-if="tab === 'finance'" class="card-muji p-8 space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-white/40 p-4 rounded-2xl">
-                            <label class="text-[9px] font-bold opacity-40 block">匯率</label>
+                            <label class="text-[9px] font-bold opacity-40 block">匯率 (TWD)</label>
                             <input type="number" v-model="finance.rate" class="w-full bg-transparent font-bold outline-none">
                         </div>
                         <div class="bg-white/40 p-4 rounded-2xl">
@@ -125,6 +121,7 @@
                         </div>
                     </div>
                     <div class="bg-[#333] p-10 rounded-[30px] text-center text-white">
+                        <p class="text-[10px] opacity-50 uppercase mb-2">Total TWD</p>
                         <p class="text-4xl font-black italic">NT$ {{ Math.round(finance.amount * finance.rate).toLocaleString() }}</p>
                     </div>
                 </div>
@@ -133,105 +130,120 @@
     </div>
 
     <script>
-        const { createApp, ref, computed, watch, onMounted } = Vue;
-        createApp({
-            setup() {
-                const isSetup = ref(false); const tab = ref('list'); const selectedDay = ref(1);
-                const setup = ref({ destination: '', startDate: '', endDate: '' });
-                const weather = ref({ temp: '--', desc: 'Loading' });
-                const finance = ref({ amount: 0, rate: 0.22, ppl: 2 });
-                const itineraryData = ref({});
-
-                onMounted(() => {
-                    const saved = localStorage.getItem('tripData_v10');
-                    if(saved) { 
-                        const p = JSON.parse(saved); 
-                        itineraryData.value = p.itinerary || {}; setup.value = p.setup || setup.value;
-                        if(setup.value.destination) { isSetup.value = true; fetchWeather(); }
+        const app = Vue.createApp({
+            data() {
+                return {
+                    isSetup: false,
+                    tab: 'list',
+                    selectedDay: 1,
+                    setup: { destination: '', startDate: '', endDate: '' },
+                    weather: { temp: '--', desc: '抓取中' },
+                    finance: { amount: 0, rate: 0.22 },
+                    itineraryData: {},
+                    map: null,
+                    markers: []
+                }
+            },
+            computed: {
+                totalDays() {
+                    if (!this.setup.startDate || !this.setup.endDate) return 1;
+                    const s = new Date(this.setup.startDate);
+                    const e = new Date(this.setup.endDate);
+                    return Math.max(1, Math.ceil(Math.abs(e - s) / (86400000)) + 1);
+                },
+                formattedDate() {
+                    if (!this.setup.startDate) return '';
+                    const d = new Date(this.setup.startDate);
+                    d.setDate(d.getDate() + (this.selectedDay - 1));
+                    return (d.getMonth() + 1) + '/' + d.getDate();
+                },
+                currentDayName() {
+                    if (!this.setup.startDate) return '';
+                    const d = new Date(this.setup.startDate);
+                    d.setDate(d.getDate() + (this.selectedDay - 1));
+                    return '星期' + ['日','一','二','三','四','五','六'][d.getDay()];
+                },
+                currentPlans() {
+                    const key = 'day_' + this.selectedDay;
+                    if (!this.itineraryData[key]) this.itineraryData[key] = [];
+                    return this.itineraryData[key];
+                }
+            },
+            methods: {
+                finishSetup() {
+                    if(this.setup.destination) {
+                        this.isSetup = true;
+                        this.fetchWeather();
                     }
-                });
-
-                watch([itineraryData, setup], () => {
-                    localStorage.setItem('tripData_v10', JSON.stringify({ itinerary: itineraryData.value, setup: setup.value }));
-                }, { deep: true });
-
-                const fetchWeather = async () => {
-                    if (!setup.value.destination) return;
+                },
+                async fetchWeather() {
                     try {
-                        const res = await fetch(`https://wttr.in/${encodeURIComponent(setup.value.destination)}?format=j1`);
+                        const res = await fetch('https://wttr.in/' + encodeURIComponent(this.setup.destination) + '?format=j1');
                         const data = await res.json();
-                        weather.value = { temp: data.current_condition[0].temp_C, desc: data.current_condition[0].weatherDesc[0].value };
-                    } catch (e) { weather.value = { temp: '--', desc: 'Offline' }; }
-                };
-
-                const finishSetup = () => { if(setup.value.destination) { isSetup.value = true; fetchWeather(); } };
-
-                // 時間格式處理：強制四位碼
-                const formatTime = (p) => {
+                        this.weather.temp = data.current_condition[0].temp_C;
+                        this.weather.desc = data.current_condition[0].weatherDesc[0].value;
+                    } catch (e) {
+                        this.weather.temp = '15';
+                        this.weather.desc = 'Sunny';
+                    }
+                },
+                handleTimeBlur(p) {
                     let val = p.time.replace(/\D/g, '');
                     if (val.length === 0) p.time = '00:00';
                     else if (val.length <= 2) p.time = val.padStart(2, '0') + ':00';
                     else p.time = val.slice(0, 2) + ':' + val.slice(2, 4).padEnd(2, '0');
-                };
-
-                const currentPlans = computed(() => {
-                    const key = `day_${selectedDay.value}`;
-                    if (!itineraryData.value[key]) itineraryData.value[key] = [];
-                    return itineraryData.value[key];
-                });
-
-                const addPlan = () => currentPlans.value.push({ ampm: '上午', time: '00:00', loc: '', mapLink: '', food: '', note: '' });
-
-                let map, markers = [];
-                const updateMapMarkers = () => {
+                },
+                addPlan() {
+                    this.currentPlans.push({ ampm: '上午', time: '00:00', loc: '', mapLink: '', food: '', note: '', transport: '🚗 交通' });
+                },
+                updateMapMarkers() {
                     setTimeout(() => {
-                        if (!map) {
-                            map = L.map('map').setView([20, 0], 2);
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                        if (!this.map) {
+                            this.map = L.map('map').setView([20, 0], 2);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
                         }
-                        markers.forEach(m => map.removeLayer(m)); markers = [];
-                        currentPlans.value.forEach(p => {
+                        this.markers.forEach(m => this.map.removeLayer(m));
+                        this.markers = [];
+                        this.currentPlans.forEach(p => {
                             if (p.mapLink) {
-                                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(p.mapLink)}`)
+                                fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(p.mapLink))
                                     .then(r => r.json()).then(data => {
                                         if (data[0]) {
-                                            const m = L.marker([data[0].lat, data[0].lon]).addTo(map).bindPopup(p.loc || p.mapLink);
-                                            markers.push(m);
+                                            const m = L.marker([data[0].lat, data[0].lon]).addTo(this.map).bindPopup(p.loc || p.mapLink);
+                                            this.markers.push(m);
                                         }
                                     });
                             }
                         });
                     }, 300);
-                };
-
-                const focusLocation = (locName) => {
-                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locName)}`)
+                },
+                focusLocation(locName) {
+                    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(locName))
                         .then(r => r.json()).then(data => {
-                            if (data[0]) map.flyTo([data[0].lat, data[0].lon], 15);
+                            if (data[0]) this.map.flyTo([data[0].lat, data[0].lon], 15);
                         });
-                };
-
-                const totalDays = computed(() => {
-                    if (!setup.value.startDate || !setup.value.endDate) return 1;
-                    const s = new Date(setup.value.startDate); const e = new Date(setup.value.endDate);
-                    return Math.max(1, Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24)) + 1);
-                });
-
-                const formattedDate = computed(() => {
-                    if (!setup.value.startDate) return '';
-                    const d = new Date(setup.value.startDate); d.setDate(d.getDate() + (selectedDay.value - 1));
-                    return `${d.getMonth() + 1}/${d.getDate()}`;
-                });
-
-                const currentDayName = computed(() => {
-                    if (!setup.value.startDate) return '';
-                    const d = new Date(setup.value.startDate); d.setDate(d.getDate() + (selectedDay.value - 1));
-                    return ['日','一','二','三','四','五','六'][d.getDay()];
-                });
-
-                return { isSetup, setup, totalDays, tab, selectedDay, finance, itineraryData, currentPlans, weather, formattedDate, currentDayName, finishSetup, addPlan, formatTime, updateMapMarkers, focusLocation };
+                }
+            },
+            mounted() {
+                const saved = localStorage.getItem('tripData_final');
+                if(saved) {
+                    const p = JSON.parse(saved);
+                    this.itineraryData = p.itinerary || {};
+                    this.setup = p.setup || this.setup;
+                    if(this.setup.destination) {
+                        this.isSetup = true;
+                        this.fetchWeather();
+                    }
+                }
+            },
+            updated() {
+                localStorage.setItem('tripData_final', JSON.stringify({
+                    itinerary: this.itineraryData,
+                    setup: this.setup
+                }));
             }
-        }).mount('#app');
+        });
+        app.mount('#app');
     </script>
 </body>
 </html>

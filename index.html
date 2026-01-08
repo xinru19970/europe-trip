@@ -14,177 +14,179 @@
             --latte: #e8e2d6; 
             --dark-text: #5e503f;
             --pure-white: #ffffff;
+            --accent-purple: #9d94ff; /* 特別的框框顏色 */
         }
         body { 
             background-color: var(--latte); 
             color: var(--dark-text); 
             font-family: -apple-system, "PingFang TC", sans-serif;
             margin: 0; padding: 0;
-            background-image: radial-gradient(circle at 90% 10%, rgba(189,163,143,0.1) 0%, transparent 40%);
         }
-
-        /* 裝飾線條 */
-        .deco-circle {
-            position: fixed; border: 1px solid rgba(94, 80, 63, 0.08);
-            border-radius: 50%; z-index: -1;
-        }
-        .deco-1 { top: -50px; right: -50px; width: 300px; height: 300px; }
 
         [v-cloak] { display: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* 卡片與輸入框樣式 */
         .card-muji { 
-            background: rgba(255, 255, 255, 0.65); 
+            background: rgba(255, 255, 255, 0.7); 
             backdrop-filter: blur(12px);
-            border-radius: 35px; 
+            border-radius: 30px; 
             border: 1px solid rgba(255,255,255,0.4);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.03);
         }
-        .input-box {
+
+        /* 頂部特別顏色框框 */
+        .status-banner {
+            background: linear-gradient(135deg, #a9b3a0 0%, #9d94ff 100%);
+            color: white;
+            border-radius: 25px;
+            box-shadow: 0 10px 20px rgba(157, 148, 255, 0.2);
+        }
+
+        /* 時間軸線條 */
+        .timeline-line {
+            position: absolute;
+            left: 34px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(94, 80, 63, 0.1);
+            z-index: 0;
+        }
+
+        .input-clean {
+            background: transparent;
+            border: none;
+            outline: none;
+            width: 100%;
+        }
+
+        .select-mini {
+            background: white;
+            border-radius: 8px;
+            font-size: 10px;
+            padding: 2px 6px;
+            border: 1px solid rgba(0,0,0,0.05);
+            appearance: none;
+        }
+
+        .time-circle {
             background: var(--pure-white);
             border-radius: 15px;
-            padding: 14px;
-            border: none;
-            width: 100%;
-            font-size: 15px;
-            outline: none;
-        }
-        .btn-confirm {
-            background: #a9b3a0;
-            color: white;
-            border-radius: 20px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-
-        /* 行程時間圓格樣式 */
-        .time-badge {
-            background: var(--pure-white);
-            border-radius: 18px;
-            padding: 10px;
+            width: 75px;
+            padding: 8px 0;
             text-align: center;
-            min-width: 70px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
         }
 
-        .active-day {
-            background: #d6cfc5 !important;
-            transform: scale(1.05);
-        }
-
-        #map { height: 300px; border-radius: 35px; border: 6px solid white; }
+        #map { height: 300px; border-radius: 30px; border: 6px solid white; }
     </style>
 </head>
 <body class="pb-28">
-    <div class="deco-circle deco-1"></div>
-
     <div id="app" v-cloak>
         <div v-if="!isSetup" class="fixed inset-0 z-[100] bg-[#e8e2d6] flex flex-col items-center justify-center px-8">
             <div class="card-muji w-full max-w-sm p-8 space-y-6">
-                <div class="text-center">
-                    <h1 class="text-2xl font-bold italic mb-1">My Travel Itinerary</h1>
-                    <p class="text-[10px] opacity-40 tracking-widest uppercase">開啟您的旅程</p>
-                </div>
-                
+                <h1 class="text-2xl font-bold text-center italic">My Travel Itinerary</h1>
                 <div class="space-y-4">
-                    <input v-model="setup.destination" @blur="detectCountry" placeholder="目的地 (City/Country)" class="input-box shadow-sm">
+                    <input v-model="setup.destination" placeholder="目的地 (例如：東京)" class="w-full p-4 bg-white rounded-2xl outline-none">
                     <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="text-[9px] opacity-40 ml-2 mb-1 block">START DATE</label>
-                            <input type="date" v-model="setup.startDate" class="input-box text-xs">
-                        </div>
-                        <div>
-                            <label class="text-[9px] opacity-40 ml-2 mb-1 block">END DATE</label>
-                            <input type="date" v-model="setup.endDate" class="input-box text-xs">
-                        </div>
+                        <input type="date" v-model="setup.startDate" class="p-3 bg-white rounded-xl text-xs outline-none">
+                        <input type="date" v-model="setup.endDate" class="p-3 bg-white rounded-xl text-xs outline-none">
                     </div>
-                    <div class="bg-white/40 p-4 rounded-2xl text-center">
-                        <span class="text-xs opacity-50">預計遊玩總天數：</span>
-                        <span class="text-lg font-bold text-mocha">{{ totalDays }} 天</span>
-                    </div>
-                    <button @click="finishSetup" class="btn-confirm w-full py-4 shadow-md">START JOURNEY</button>
+                    <button @click="finishSetup" class="w-full py-4 bg-[#a9b3a0] text-white rounded-2xl font-bold shadow-lg">START JOURNEY</button>
                 </div>
             </div>
         </div>
 
         <div v-else class="max-w-md mx-auto animate-in fade-in duration-500">
-            <header class="p-8 pb-4 flex justify-between items-start">
-                <div>
-                    <h1 class="text-3xl font-bold">{{ setup.destination }}</h1>
-                    <p class="text-[10px] font-bold opacity-30 tracking-widest uppercase">{{ totalDays }} Days Trip</p>
+            <div class="px-6 pt-8">
+                <div class="status-banner p-6 flex justify-between items-center relative overflow-hidden">
+                    <div class="z-10">
+                        <h2 class="text-2xl font-bold">{{ formattedCurrentDate }}</h2>
+                        <p class="text-sm opacity-90">{{ setup.destination }} · {{ currentDayOfWeek }}</p>
+                    </div>
+                    <div class="text-right z-10">
+                        <div class="text-3xl font-bold">{{ weather.temp }}°</div>
+                        <p class="text-[10px] uppercase tracking-widest opacity-80">{{ weather.desc }}</p>
+                    </div>
                 </div>
-                <button @click="isSetup = false" class="bg-white/50 w-10 h-10 rounded-full shadow-sm text-sm">✎</button>
-            </header>
+            </div>
 
-            <div class="flex overflow-x-auto px-6 space-x-3 no-scrollbar mb-8">
-                <div v-for="d in totalDays" :key="d" @click="selectedDay = d"
-                     :class="['flex-shrink-0 w-12 h-16 flex flex-col items-center justify-center rounded-2xl bg-white/40 transition-all', { 'active-day shadow-md': selectedDay === d }]">
+            <div class="flex overflow-x-auto px-6 space-x-3 no-scrollbar my-6">
+                <div v-for="d in totalDays" :key="d" @click="selectedDay = d; fetchWeather()"
+                     :class="['flex-shrink-0 w-12 h-16 flex flex-col items-center justify-center rounded-2xl bg-white/40 transition-all', { 'bg-[#d6cfc5] shadow-inner': selectedDay === d }]">
                     <span class="text-[8px] font-bold opacity-40">Day</span>
                     <span class="text-lg font-bold">{{ d }}</span>
                 </div>
             </div>
 
-            <main class="px-6 space-y-6">
-                <div class="flex space-x-6 text-sm font-bold border-b border-white/30 pb-2">
-                    <button @click="tab = 'list'" :class="tab === 'list' ? 'opacity-100' : 'opacity-30'">行程</button>
+            <main class="px-6">
+                <div class="flex space-x-6 text-sm font-bold border-b border-white/30 pb-2 mb-6">
+                    <button @click="tab = 'list'" :class="tab === 'list' ? 'opacity-100' : 'opacity-30'">行程行程</button>
                     <button @click="tab = 'map'; if(tab==='map')initMap()" :class="tab === 'map' ? 'opacity-100' : 'opacity-30'">地圖</button>
                     <button @click="tab = 'finance'" :class="tab === 'finance' ? 'opacity-100' : 'opacity-30'">分帳</button>
                 </div>
 
-                <div v-if="tab === 'list'" class="space-y-5">
-                    <div v-for="(p, i) in currentPlans" :key="i" class="card-muji p-5 flex flex-col space-y-3">
-                        <div class="flex items-center space-x-4">
-                            <div class="time-badge">
-                                <span class="text-[10px] block opacity-40">時間</span>
-                                <input type="time" v-model="p.time" class="text-sm font-bold bg-transparent outline-none w-full text-center">
+                <div v-if="tab === 'list'" class="space-y-8 relative">
+                    <div class="timeline-line"></div>
+                    
+                    <div v-for="(p, i) in currentPlans" :key="i" class="relative flex items-start space-x-6">
+                        <div class="flex flex-col items-center space-y-2">
+                            <div class="time-circle shadow-sm border border-black/5">
+                                <select v-model="p.ampm" class="text-[9px] font-bold block mx-auto outline-none bg-transparent">
+                                    <option value="AM">上午</option>
+                                    <option value="PM">下午</option>
+                                </select>
+                                <input type="time" v-model="p.time" class="text-xs font-bold bg-transparent outline-none w-full text-center">
                             </div>
-                            <div class="flex-grow">
-                                <input v-model="p.loc" placeholder="行程標題 (例如: 到達東京)" class="text-base font-bold bg-transparent outline-none w-full border-b border-black/5 pb-1">
-                                <div class="flex items-center mt-2 text-blue-400">
-                                    <span class="text-[10px] mr-1">📍</span>
-                                    <input v-model="p.mapLink" placeholder="地圖地點名稱..." class="text-[10px] bg-transparent outline-none w-full placeholder:text-blue-200">
-                                </div>
+                            <div class="relative">
+                                <select v-model="p.transport" class="select-mini shadow-sm">
+                                    <option value="🚗 交通">交通</option>
+                                    <option value="🚃 地鐵">地鐵</option>
+                                    <option value="🚌 公車">公車</option>
+                                    <option value="🚄 JR/新幹線">JR</option>
+                                    <option value="✈️ 飛機">飛機</option>
+                                    <option value="🚶 步行">步行</option>
+                                    <option value="🚕 計程車">計程車</option>
+                                </select>
                             </div>
-                            <button @click="removePlan(i)" class="text-xs opacity-10">✕</button>
                         </div>
-                        <div class="bg-white/40 p-3 rounded-xl">
-                            <textarea v-model="p.note" placeholder="輸入備註內容 (例如: 記得填寫 Visit Japan Web)..." class="text-[11px] bg-transparent w-full outline-none resize-none opacity-60" rows="2"></textarea>
+
+                        <div class="card-muji flex-grow p-5 shadow-sm">
+                            <div class="flex justify-between items-start">
+                                <input v-model="p.loc" placeholder="行程標題..." class="text-base font-bold input-clean border-b border-black/5 pb-1">
+                                <button @click="removePlan(i)" class="text-xs opacity-10">✕</button>
+                            </div>
+                            
+                            <div class="flex items-center mt-3 text-blue-400">
+                                <span class="text-[10px] mr-1">📍</span>
+                                <input v-model="p.mapLink" placeholder="地圖地點連結..." class="text-[10px] input-clean">
+                            </div>
+
+                            <div class="mt-3 flex items-center bg-[#fdfaf5] p-2 rounded-xl border border-[#f2e8df]">
+                                <span class="text-xs mr-2">🍱</span>
+                                <input v-model="p.food" placeholder="預計要吃什麼？" class="text-[11px] font-medium input-clean opacity-80">
+                            </div>
+
+                            <div class="mt-3 bg-white/40 p-3 rounded-xl">
+                                <textarea v-model="p.note" placeholder="詳細備註..." class="text-[11px] input-clean opacity-60 resize-none" rows="2"></textarea>
+                            </div>
                         </div>
                     </div>
+
                     <button @click="addPlan" class="w-full py-5 rounded-[25px] border-2 border-dashed border-white/60 text-[10px] font-bold opacity-40 tracking-widest">+ ADD NEW PLAN</button>
                 </div>
 
-                <div v-show="tab === 'map'" class="animate-in fade-in">
+                <div v-show="tab === 'map'">
                     <div id="map"></div>
                 </div>
 
                 <div v-if="tab === 'finance'" class="card-muji p-8 space-y-6">
-                    <div class="flex justify-between items-center text-xs font-bold opacity-60">
-                        <span>目前匯率 (1{{config.currencySymbol}})</span>
-                        <input type="number" v-model="config.rate" class="w-16 text-right bg-transparent border-b border-dark-text/20 outline-none">
-                    </div>
-                    <div class="space-y-4">
-                        <div class="bg-white/40 p-4 rounded-2xl flex justify-between items-center">
-                            <span class="text-[10px] font-bold opacity-40 uppercase">Amount</span>
-                            <input type="number" v-model="expense.foreign" class="w-24 text-right font-bold text-lg bg-transparent outline-none">
-                        </div>
-                        <div class="bg-white/40 p-4 rounded-2xl flex justify-between items-center">
-                            <span class="text-[10px] font-bold opacity-40 uppercase">People</span>
-                            <input type="number" v-model="expense.ppl" class="w-24 text-right font-bold text-lg bg-transparent outline-none">
-                        </div>
-                    </div>
                     <div class="bg-[#5e503f] p-8 rounded-[35px] text-center text-white shadow-lg">
                         <p class="text-[10px] font-bold opacity-50 uppercase tracking-widest mb-1">Total per person</p>
                         <p class="text-3xl font-serif font-bold italic">NT$ {{ Math.round((expense.foreign * config.rate) / expense.ppl).toLocaleString() }}</p>
                     </div>
                 </div>
             </main>
-
-            <div class="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center space-x-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full border border-white/50">
-                <div class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                <span class="text-[9px] font-bold opacity-30 uppercase tracking-tighter">Live Cloud Sync</span>
-            </div>
         </div>
     </div>
 
@@ -200,12 +202,11 @@
             storageBucket: "europe-trip-app.firebasestorage.app",
             messagingSenderId: "328114172706",
             appId: "1:328114172706:web:88a10ea7820325cbf02b7b",
-            measurementId: "G-3C0N9RLK54"
         };
 
         const fApp = initializeApp(firebaseConfig);
         const db = getDatabase(fApp);
-        const dbRef = ref(db, 'trip_data_v3_final');
+        const dbRef = ref(db, 'trip_data_v4_pro');
 
         const { createApp, ref: vueRef, computed, watch } = Vue;
 
@@ -215,26 +216,39 @@
                 const tab = vueRef('list');
                 const selectedDay = vueRef(1);
                 const setup = vueRef({ destination: '', startDate: '', endDate: '' });
+                const weather = vueRef({ temp: '--', desc: 'Fetching...' });
                 const expense = vueRef({ foreign: 0, ppl: 2 });
                 const itineraryData = vueRef({});
-                const config = vueRef({ currencySymbol: '€', currencyName: 'EUR', rate: 35.2, lang: 'Europe' });
+                const config = vueRef({ currencySymbol: '¥', currencyName: 'JPY', rate: 0.22 });
+
+                // 計算日期與星期
+                const formattedCurrentDate = computed(() => {
+                    if (!setup.value.startDate) return '';
+                    const d = new Date(setup.value.startDate);
+                    d.setDate(d.getDate() + (selectedDay.value - 1));
+                    return `${d.getMonth() + 1}/${d.getDate()}`;
+                });
+
+                const currentDayOfWeek = computed(() => {
+                    if (!setup.value.startDate) return '';
+                    const d = new Date(setup.value.startDate);
+                    d.setDate(d.getDate() + (selectedDay.value - 1));
+                    return '星期' + ['日','一','二','三','四','五','六'][d.getDay()];
+                });
 
                 const totalDays = computed(() => {
                     if (!setup.value.startDate || !setup.value.endDate) return 1;
                     const start = new Date(setup.value.startDate);
                     const end = new Date(setup.value.endDate);
-                    const diffTime = Math.abs(end - start);
-                    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    return Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1;
                 });
 
-                const detectCountry = () => {
-                    const d = setup.value.destination.toLowerCase();
-                    if (d.includes('tokyo') || d.includes('japan')) config.value = { currencySymbol: '¥', currencyName: 'JPY', rate: 0.22, lang: 'JP' };
-                    else if (d.includes('london')) config.value = { currencySymbol: '£', currencyName: 'GBP', rate: 41.5, lang: 'UK' };
-                    else config.value = { currencySymbol: '€', currencyName: 'EUR', rate: 35.2, lang: 'Europe' };
+                // 串接真實天氣 API (模擬)
+                const fetchWeather = async () => {
+                    weather.value = { temp: Math.floor(Math.random() * 10) + 5, desc: 'Sunny' };
                 };
 
-                const finishSetup = () => { if(setup.value.destination) isSetup.value = true; };
+                const finishSetup = () => { if(setup.value.destination) { isSetup.value = true; fetchWeather(); } };
 
                 onValue(dbRef, (snap) => { if(snap.val()) itineraryData.value = snap.val(); });
                 watch(itineraryData, (newData) => { set(dbRef, JSON.parse(JSON.stringify(newData))); }, { deep: true });
@@ -245,19 +259,19 @@
                     return itineraryData.value[key];
                 });
 
-                const addPlan = () => currentPlans.value.push({ time: '09:00', loc: '', mapLink: '', note: '' });
+                const addPlan = () => currentPlans.value.push({ ampm: 'AM', time: '09:00', transport: '🚗 交通', loc: '', mapLink: '', food: '', note: '' });
                 const removePlan = (idx) => currentPlans.value.splice(idx, 1);
 
                 let map;
                 const initMap = () => {
                     setTimeout(() => {
                         if (map) map.remove();
-                        map = L.map('map').setView([48.8566, 2.3522], 13);
+                        map = L.map('map').setView([35.6895, 139.6917], 13);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                     }, 300);
                 };
 
-                return { isSetup, setup, totalDays, config, tab, selectedDay, expense, itineraryData, currentPlans, detectCountry, finishSetup, addPlan, removePlan, initMap };
+                return { isSetup, setup, totalDays, tab, selectedDay, expense, itineraryData, currentPlans, weather, formattedCurrentDate, currentDayOfWeek, finishSetup, addPlan, removePlan, initMap, fetchWeather };
             }
         }).mount('#app');
     </script>

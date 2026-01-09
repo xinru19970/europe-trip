@@ -16,7 +16,7 @@
         .status-banner { background: var(--deep-banner); color: white; border-radius: 20px; padding: 24px; }
         .timeline-line { position: absolute; left: 42px; top: 0; bottom: 0; width: 1px; background: rgba(67, 52, 34, 0.15); z-index: 0; }
         .input-box { background: #ffffff; border-radius: 12px; padding: 10px 14px; width: 100%; font-size: 14px; border: 1px solid rgba(0,0,0,0.05); outline: none; }
-        .time-badge { background: white; border-radius: 14px; width: 84px; padding: 10px 4px; text-align: center; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .time-badge { background: white; border-radius: 14px; width: 95px; padding: 8px 4px; text-align: center; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .select-field { background: transparent; font-weight: bold; font-size: 14px; outline: none; width: 100%; text-align: center; cursor: pointer; }
         #map { height: 350px; border-radius: 24px; border: 6px solid white; width: 100%; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -27,10 +27,8 @@
 <body>
     <div id="app" v-cloak>
         <div v-if="!isSetup" class="fixed inset-0 z-[100] bg-[#e8e2d6] flex flex-col items-center justify-center px-8">
-            <div class="card-muji w-full max-w-sm p-10 space-y-6">
-                <div class="text-center">
-                    <h1 class="text-2xl font-bold">Travel Planner</h1>
-                </div>
+            <div class="card-muji w-full max-sm p-10 space-y-6">
+                <div class="text-center"><h1 class="text-2xl font-bold">Travel Planner</h1></div>
                 <div class="space-y-4">
                     <input v-model="setup.destination" placeholder="目的地 (例如：東京)" class="input-box py-4 text-center">
                     <div class="grid grid-cols-2 gap-3">
@@ -50,7 +48,7 @@
                         <p class="text-xs opacity-70 mt-1 uppercase">📍 {{ setup.destination }}</p>
                     </div>
                     <div class="text-right">
-                        <div class="text-3xl font-black">{{ weather.temp }}°C</div>
+                        <div class="text-3xl font-black">{{ weatherIcon }} {{ weather.temp }}°C</div>
                         <p class="text-[10px] font-bold opacity-70 uppercase">{{ weather.desc }}</p>
                     </div>
                 </div>
@@ -76,67 +74,70 @@
                     <div v-for="(p, i) in currentPlans" :key="i" class="relative flex items-start space-x-6">
                         <div class="flex flex-col items-center">
                             <div class="time-badge">
-                                <select v-model="p.time" class="select-field">
-                                    <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
-                                </select>
+                                <button @click="p.ampm = p.ampm === '上午' ? '下午' : '上午'" class="text-[9px] font-black bg-gray-100 px-2 py-0.5 rounded mb-1">{{ p.ampm }}</button>
+                                <div class="flex items-center justify-center space-x-1">
+                                    <span class="text-[10px]">⏰</span>
+                                    <select v-model="p.time" class="select-field text-xs">
+                                        <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
+                                    </select>
+                                </div>
                             </div>
                             <select v-model="p.transport" class="mt-2 text-[10px] bg-white rounded p-1 outline-none">
                                 <option>🚗 交通</option><option>🚇 地鐵</option><option>🚄 JR</option><option>🚶 步行</option>
                             </select>
                         </div>
-                        <div class="card-muji flex-grow p-5 space-y-4">
-                            <input v-model="p.loc" placeholder="行程標題..." class="text-base font-bold bg-transparent outline-none w-full">
-                            <div @click="tab = 'map'; updateMapMarkers(p.mapLink)" class="flex items-center bg-[#f9f9f9] rounded-xl px-3 border border-black/5 cursor-pointer hover:bg-gray-100">
+                        <div class="card-muji flex-grow p-5 space-y-4" @click="tab = 'map'; updateMapMarkers(p.mapLink)">
+                            <input v-model="p.loc" placeholder="行程標題..." class="text-base font-bold bg-transparent outline-none w-full" @click.stop>
+                            <div class="flex items-center bg-[#f9f9f9] rounded-xl px-3 border border-black/5">
                                 <span class="text-sm mr-2">📍</span>
-                                <input v-model="p.mapLink" placeholder="地點名稱 (點擊定位)" class="bg-transparent py-2 w-full text-sm outline-none cursor-pointer" readonly>
+                                <input v-model="p.mapLink" placeholder="地點名稱 (點擊卡片定位)" class="bg-transparent py-2 w-full text-sm outline-none" @click.stop>
                             </div>
-                            <textarea v-model="p.note" placeholder="詳細備註..." class="input-box h-16 resize-none opacity-60 text-xs bg-[#f9f9f9]"></textarea>
+                            <textarea v-model="p.note" placeholder="詳細備註..." class="input-box h-16 resize-none opacity-60 text-xs bg-[#f9f9f9]" @click.stop></textarea>
                         </div>
                     </div>
                     <button @click="addPlan" class="w-full py-5 rounded-2xl border-2 border-dashed border-white/60 text-[10px] font-bold opacity-40">+ ADD PLAN</button>
                 </div>
 
-                <div v-show="tab === 'map'" class="space-y-4">
-                    <div id="map"></div>
-                </div>
+                <div v-show="tab === 'map'" class="space-y-4"><div id="map"></div></div>
 
                 <div v-if="tab === 'items'" class="card-muji p-6 space-y-6">
                     <div class="flex space-x-2">
                         <select v-model="newItem" class="input-box flex-grow">
-                            <option value="" disabled>選擇或輸入用品</option>
                             <option v-for="opt in itemOptions" :key="opt" :value="opt">{{ opt }}</option>
                         </select>
                         <button @click="addItem" class="px-4 bg-[#333] text-white rounded-xl text-sm font-bold">新增</button>
                     </div>
                     <div class="space-y-3">
                         <div v-for="(item, idx) in checklist" :key="idx" class="flex items-center justify-between bg-white/50 p-3 rounded-xl">
-                            <div class="flex items-center space-x-3">
-                                <div @click="item.done = !item.done" :class="['checkbox-custom', { 'checked': item.done }]">
-                                    <span v-if="item.done">✓</span>
-                                </div>
+                            <div class="flex items-center space-x-3" @click="item.done = !item.done">
+                                <div :class="['checkbox-custom', { 'checked': item.done }]"><span v-if="item.done">✓</span></div>
                                 <span :class="{ 'line-through opacity-40': item.done }">{{ item.name }}</span>
                             </div>
                             <button @click="checklist.splice(idx, 1)" class="opacity-20 text-xs">✕</button>
                         </div>
                     </div>
-                    <div class="pt-4 border-t border-black/5 text-center">
-                        <p class="text-sm font-bold opacity-60">已準備： {{ totalPrepared }} / {{ checklist.length }}</p>
-                    </div>
+                    <p class="text-center text-sm font-bold opacity-60 border-t pt-4">已完成：{{ totalPrepared }} / {{ checklist.length }}</p>
                 </div>
 
-                <div v-if="tab === 'finance'" class="card-muji p-8 space-y-6">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-white/40 p-4 rounded-2xl">
-                            <label class="text-[9px] font-bold opacity-40 block">匯率</label>
-                            <input type="number" v-model="finance.rate" class="w-full bg-transparent font-bold outline-none">
+                <div v-if="tab === 'finance'" class="card-muji p-6 space-y-6">
+                    <div class="space-y-4">
+                        <input type="number" v-model="finance.amount" placeholder="輸入外幣金額" class="input-box text-xl font-bold text-center">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-gray-50 p-3 rounded-xl">
+                                <label class="text-[10px] block opacity-50">匯率 (對台幣)</label>
+                                <input type="number" v-model="finance.rate" class="w-full bg-transparent font-bold">
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-xl">
+                                <label class="text-[10px] block opacity-50">付款人</label>
+                                <input v-model="finance.payer" class="w-full bg-transparent font-bold">
+                            </div>
                         </div>
-                        <div class="bg-white/40 p-4 rounded-2xl">
-                            <label class="text-[9px] font-bold opacity-40 block">外幣金額</label>
-                            <input type="number" v-model="finance.amount" class="w-full bg-transparent font-bold outline-none">
-                        </div>
+                        <input v-model="finance.receiver" placeholder="分攤人姓名 (用逗號隔開)" class="input-box text-sm">
                     </div>
-                    <div class="bg-[#333] p-10 rounded-[30px] text-center text-white">
-                        <p class="text-4xl font-black italic">NT$ {{ Math.round(finance.amount * finance.rate).toLocaleString() }}</p>
+                    <div class="bg-[#333] p-8 rounded-[30px] text-white text-center">
+                        <p class="text-[10px] opacity-60 uppercase mb-1">台幣總額 NT$ {{ Math.round(finance.amount * finance.rate) }}</p>
+                        <div class="h-[1px] bg-white/10 my-3"></div>
+                        <p v-if="splitInfo" class="text-lg font-bold text-[#bda38f] italic">{{ splitInfo }}</p>
                     </div>
                 </div>
             </main>
@@ -150,19 +151,13 @@
                 const isSetup = ref(false); const tab = ref('list'); const selectedDay = ref(1);
                 const setup = ref({ destination: '', startDate: '', endDate: '' });
                 const weather = ref({ temp: '--', desc: '抓取中' });
-                const finance = ref({ amount: 0, rate: 0.22 });
+                const finance = ref({ amount: 0, rate: 0.22, payer: '我', receiver: '旅伴' });
                 const itineraryData = ref({});
-                const newItem = ref('');
-                const checklist = ref([]);
+                const newItem = ref('護照/簽證'); const checklist = ref([]);
                 const itemOptions = ["護照/簽證", "行動電源", "網卡/Wifi機", "日幣/外幣", "換洗衣物", "盥洗用品", "常備藥品", "雨具", "充電線", "相機"];
                 let map, markers = [];
 
-                // 生成時間選單
-                const timeSlots = [];
-                for(let i=0; i<24; i++) {
-                    const h = i.toString().padStart(2, '0');
-                    timeSlots.push(`${h}:00`); timeSlots.push(`${h}:30`);
-                }
+                const timeSlots = Array.from({length: 24}, (_, i) => [i.toString().padStart(2, '0') + ':00', i.toString().padStart(2, '0') + ':30']).flat();
 
                 onMounted(() => {
                     const saved = localStorage.getItem('myTripData');
@@ -176,69 +171,70 @@
                 });
 
                 watch([itineraryData, setup, finance, checklist], () => {
-                    localStorage.setItem('myTripData', JSON.stringify({ 
-                        itinerary: itineraryData.value, 
-                        setup: setup.value, 
-                        checklist: checklist.value 
-                    }));
+                    localStorage.setItem('myTripData', JSON.stringify({ itinerary: itineraryData.value, setup: setup.value, checklist: checklist.value }));
                 }, { deep: true });
 
                 const fetchWeather = async () => {
-                    if (!setup.value.destination) return;
                     try {
                         const res = await fetch(`https://wttr.in/${encodeURIComponent(setup.value.destination)}?format=j1`);
                         const data = await res.json();
                         weather.value = { temp: data.current_condition[0].temp_C, desc: data.current_condition[0].weatherDesc[0].value };
-                    } catch (e) { weather.value = { temp: '22', desc: 'Sunny' }; }
+                    } catch (e) { weather.value = { temp: '20', desc: 'Sunny' }; }
                 };
+
+                const weatherIcon = computed(() => {
+                    const desc = weather.value.desc.toLowerCase();
+                    if (desc.includes('sun') || desc.includes('clear')) return '☀️';
+                    if (desc.includes('cloud')) return '☁️';
+                    if (desc.includes('rain')) return '🌧️';
+                    if (desc.includes('snow')) return '❄️';
+                    return '🌤️';
+                });
+
+                const splitInfo = computed(() => {
+                    if (!finance.value.amount || !finance.value.receiver) return "";
+                    const totalTWD = finance.value.amount * finance.value.rate;
+                    const receivers = finance.value.receiver.split(',');
+                    const perPerson = Math.round(totalTWD / (receivers.length + 1));
+                    return `${receivers.join('、')} 應給 ${finance.value.payer} NT$ ${perPerson}`;
+                });
 
                 const updateMapMarkers = (focusLoc) => {
                     setTimeout(() => {
-                        if (!map) {
-                            map = L.map('map').setView([25, 121], 10);
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                        }
+                        if (!map) { map = L.map('map').setView([25, 121], 10); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); }
                         markers.forEach(m => map.removeLayer(m)); markers = [];
                         currentPlans.value.forEach(p => {
-                            if (p.mapLink) {
-                                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(p.mapLink)}`)
-                                    .then(r => r.json()).then(data => {
-                                        if (data[0]) {
-                                            const m = L.marker([data[0].lat, data[0].lon]).addTo(map).bindPopup(p.loc || p.mapLink);
-                                            markers.push(m);
-                                            if (focusLoc === p.mapLink) map.flyTo([data[0].lat, data[0].lon], 15);
-                                        }
-                                    });
-                            }
+                            if (p.mapLink) fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(p.mapLink)}`)
+                                .then(r => r.json()).then(data => {
+                                    if (data[0]) {
+                                        const m = L.marker([data[0].lat, data[0].lon]).addTo(map).bindPopup(p.loc || p.mapLink);
+                                        markers.push(m); if (focusLoc === p.mapLink) map.flyTo([data[0].lat, data[0].lon], 15);
+                                    }
+                                });
                         });
                     }, 200);
                 };
 
-                const addItem = () => { if(newItem.value) { checklist.value.push({ name: newItem.value, done: false }); newItem.value = ''; } };
+                const addItem = () => { if(newItem.value) { checklist.value.push({ name: newItem.value, done: false }); } };
                 const totalPrepared = computed(() => checklist.value.filter(i => i.done).length);
-
                 const totalDays = computed(() => {
                     if (!setup.value.startDate || !setup.value.endDate) return 1;
-                    const s = new Date(setup.value.startDate); const e = new Date(setup.value.endDate);
-                    return Math.max(1, Math.ceil(Math.abs(e - s) / 86400000) + 1);
+                    return Math.max(1, Math.ceil(Math.abs(new Date(setup.value.endDate) - new Date(setup.value.startDate)) / 86400000) + 1);
                 });
-
                 const formattedDate = computed(() => {
                     if (!setup.value.startDate) return '';
                     const d = new Date(setup.value.startDate); d.setDate(d.getDate() + (selectedDay.value - 1));
                     return `${d.getMonth() + 1}/${d.getDate()}`;
                 });
-
                 const currentPlans = computed(() => {
                     const key = `day_${selectedDay.value}`;
                     if (!itineraryData.value[key]) itineraryData.value[key] = [];
                     return itineraryData.value[key];
                 });
-
-                const addPlan = () => currentPlans.value.push({ time: '09:00', transport: '🚗 交通', loc: '', mapLink: '', note: '' });
+                const addPlan = () => currentPlans.value.push({ ampm: '上午', time: '09:00', transport: '🚗 交通', loc: '', mapLink: '', note: '' });
                 const finishSetup = () => { if(setup.value.destination) { isSetup.value = true; fetchWeather(); } };
 
-                return { isSetup, setup, totalDays, tab, selectedDay, finance, itineraryData, currentPlans, weather, formattedDate, finishSetup, addPlan, updateMapMarkers, timeSlots, newItem, checklist, itemOptions, addItem, totalPrepared };
+                return { isSetup, setup, totalDays, tab, selectedDay, finance, itineraryData, currentPlans, weather, weatherIcon, formattedDate, finishSetup, addPlan, updateMapMarkers, timeSlots, newItem, checklist, itemOptions, addItem, totalPrepared, splitInfo };
             }
         }).mount('#app');
     </script>

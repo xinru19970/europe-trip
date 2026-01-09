@@ -3,130 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Travel Pro - Ultra</title>
+    <title>My Travel Pro - Customized</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <style>
-        :root { --mocha: #bda38f; --dark-text: #2d2d2d; }
-        
-        /* 背景圖片設定 */
+        :root { 
+            --mocha: #bda38f; 
+            --latte: #e8e2d6; 
+            --dark-text: #433422; 
+        }
+
+        /* 1. 背景圖片設定：套用你上傳的旅行插畫 */
         body { 
-            background-image: url('https://files.oaiusercontent.com/file-f38c67'); 
-            background-size: cover; background-attachment: fixed; background-position: center;
-            color: var(--dark-text); font-family: -apple-system, sans-serif; margin: 0; padding: 0; 
+            background-image: url('https://files.oaiusercontent.com/file-f38c67'); /* 替換為你的圖片 URL */
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            color: var(--dark-text); 
+            font-family: -apple-system, sans-serif; 
+            margin: 0; padding: 0; 
         }
 
         [v-cloak] { display: none; }
-        .card-muji { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        
-        /* 時間字體格式：大、粗、黑 */
-        .time-style { font-size: 1.4rem; font-weight: 800; color: #000; display: flex; align-items: center; gap: 4px; }
-        
-        /* 側邊菜單樣式 */
-        .side-menu { position: fixed; top: 0; right: 0; bottom: 0; width: 250px; background: white; z-index: 200; transform: translateX(100%); transition: 0.3s; padding: 40px 20px; }
-        .side-menu.open { transform: translateX(0); }
-        .menu-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 150; }
 
-        #map { height: 400px; border-radius: 20px; width: 100%; border: 4px solid white; }
+        /* 2. 毛玻璃卡片效果：讓文字在背景圖上依然清晰 */
+        .card-muji { 
+            background: rgba(255, 255, 255, 0.8); 
+            backdrop-filter: blur(10px); 
+            border-radius: 24px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.05); 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* 3. 行程區塊左右配置：左側時間強化 */
+        .time-focus { font-size: 1.8rem; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+        .timeline-line { position: absolute; left: 52px; top: 0; bottom: 0; width: 1px; background: rgba(67, 52, 34, 0.1); z-index: 0; }
+
+        .input-underlined { background: transparent; border-bottom: 1px solid rgba(0,0,0,0.05); outline: none; width: 100%; padding: 4px 0; font-size: 14px; }
+        
+        /* 4. 自定義勾選框（人性化手機風格） */
+        .checkbox-custom { width: 24px; height: 24px; border: 2px solid var(--mocha); border-radius: 8px; flex-shrink: 0; transition: all 0.2s; }
+        .checkbox-custom.checked { background: var(--mocha); border-color: var(--mocha); color: white; display: flex; align-items: center; justify-content: center; }
+
+        #map { height: 350px; border-radius: 24px; border: 6px solid white; width: 100%; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
     <div id="app" v-cloak>
         
-        <button @click="menuOpen = true" class="fixed top-6 right-6 z-[160] p-3 bg-white/80 rounded-full shadow-lg">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </button>
-
-        <div v-if="menuOpen" class="menu-overlay" @click="menuOpen = false"></div>
-        <div :class="['side-menu shadow-2xl', { 'open': menuOpen }]">
-            <h3 class="text-xl font-black mb-8">功能選單</h3>
-            <ul class="space-y-6">
-                <li @click="resetToHome" class="flex items-center space-x-3 cursor-pointer"><span>🏠</span> <span class="font-bold">首頁 (重新設定)</span></li>
-                <li @click="tab = 'members'; menuOpen = false" class="flex items-center space-x-3 cursor-pointer"><span>👥</span> <span class="font-bold">成員管理</span></li>
-            </ul>
-        </div>
-
         <div v-if="!isSetup" class="fixed inset-0 z-[100] flex items-center justify-center px-8 bg-white/20 backdrop-blur-md">
-            <div class="card-muji w-full max-w-sm p-10 space-y-6">
-                <h1 class="text-2xl font-black text-center">開始你的旅程</h1>
-                <input v-model="setup.destination" placeholder="目的地 (例如：倫敦)" class="w-full p-4 rounded-xl border-none bg-gray-100 outline-none">
-                <div class="grid grid-cols-2 gap-3 text-xs font-bold">
-                    <div>開始：<input type="date" v-model="setup.startDate" class="w-full p-2 mt-1 rounded-lg"></div>
-                    <div>結束：<input type="date" v-model="setup.endDate" class="w-full p-2 mt-1 rounded-lg"></div>
+            <div class="card-muji w-full max-w-sm p-10 space-y-6 text-center">
+                <h1 class="text-3xl font-black">Ready to Go?</h1>
+                <input v-model="setup.destination" placeholder="目的地 (例如：大阪)" class="w-full p-4 rounded-xl border-none shadow-inner text-center">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="date" v-model="setup.startDate" class="p-2 rounded-lg text-xs">
+                    <input type="date" v-model="setup.endDate" class="p-2 rounded-lg text-xs">
                 </div>
-                <button @click="finishSetup" class="w-full py-4 bg-black text-white rounded-xl font-bold">進入行程規劃</button>
+                <button @click="finishSetup" class="w-full py-4 bg-[#333] text-white rounded-2xl font-bold shadow-lg">START JOURNEY</button>
             </div>
         </div>
 
-        <div v-else class="max-w-md mx-auto min-h-screen px-6 pt-16 pb-24">
+        <div v-else class="max-w-md mx-auto min-h-screen pb-10">
             
-            <div class="flex overflow-x-auto space-x-3 no-scrollbar mb-6">
+            <div class="px-6 pt-8">
+                <div class="card-muji p-6 flex justify-between items-center bg-[#333]/90 text-white border-none">
+                    <div>
+                        <h2 class="text-2xl font-bold">{{ formattedDate }}</h2>
+                        <p class="text-xs opacity-60">📍 {{ setup.destination }}</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-black">{{ weatherIcon }} {{ weather.temp }}°C</div>
+                        <p class="text-[10px] font-bold opacity-60 uppercase">{{ weather.desc }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex overflow-x-auto px-6 space-x-3 no-scrollbar my-6">
                 <div v-for="d in totalDays" :key="d" @click="selectedDay = d"
-                     :class="['px-5 py-2 rounded-full font-bold whitespace-nowrap transition-all', selectedDay === d ? 'bg-black text-white' : 'bg-white/60 text-gray-500']">
+                     :class="['flex-shrink-0 px-6 h-12 flex items-center justify-center rounded-2xl font-bold transition-all', 
+                     selectedDay === d ? 'bg-[#333] text-white shadow-xl scale-105' : 'card-muji text-gray-500']">
                     Day {{ d }}
                 </div>
             </div>
 
-            <div class="card-muji bg-black p-5 text-white mb-8 border-l-8 border-mocha">
-                <div class="text-[10px] opacity-60 uppercase font-bold tracking-widest mb-1">Current Area</div>
-                <input v-model="areaInfo[selectedDay]" placeholder="輸入區域 (例如：市區 / 飯店 / 澀谷)" class="bg-transparent text-xl font-black w-full outline-none placeholder:text-white/20">
-            </div>
+            <main class="px-6 space-y-8">
+                <nav class="flex space-x-6 text-sm font-bold border-b border-black/5 pb-2">
+                    <button @click="tab = 'list'" :class="tab === 'list' ? 'border-b-2 border-[#333]' : 'opacity-30'">行程</button>
+                    <button @click="tab = 'map'; updateMapMarkers()" :class="tab === 'map' ? 'border-b-2 border-[#333]' : 'opacity-30'">地圖</button>
+                    <button @click="tab = 'items'" :class="tab === 'items' ? 'border-b-2 border-[#333]' : 'opacity-30'">必備用品</button>
+                    <button @click="tab = 'finance'" :class="tab === 'finance' ? 'border-b-2 border-[#333]' : 'opacity-30'">分帳</button>
+                </nav>
 
-            <nav class="flex space-x-6 text-sm font-black border-b border-black/5 pb-2 mb-8">
-                <button @click="tab = 'list'" :class="tab === 'list' ? 'border-b-2 border-black' : 'opacity-20'">行程</button>
-                <button @click="tab = 'map'; updateMapMarkers()" :class="tab === 'map' ? 'border-b-2 border-black' : 'opacity-20'">地圖</button>
-                <button @click="tab = 'items'" :class="tab === 'items' ? 'opacity-100' : 'opacity-20'">必備用品</button>
-                <button @click="tab = 'finance'" :class="tab === 'finance' ? 'opacity-100' : 'opacity-20'">分帳</button>
-            </nav>
-
-            <div v-if="tab === 'list'" class="space-y-8">
-                <div v-for="(p, i) in currentPlans" :key="i" class="card-muji p-6 space-y-4">
-                    <div class="flex items-center justify-between border-b border-black/5 pb-3">
-                        <div class="time-style">
-                            <span>⏰</span>
-                            <button @click="p.ampm = p.ampm === '上午' ? '下午' : '上午'" class="text-xs bg-black/5 px-2 py-1 rounded">{{ p.ampm }}</button>
-                            <select v-model="p.time" class="bg-transparent outline-none cursor-pointer">
+                <div v-if="tab === 'list'" class="space-y-10 relative">
+                    <div class="timeline-line"></div>
+                    <div v-for="(p, i) in currentPlans" :key="i" class="relative flex items-start space-x-4">
+                        
+                        <div class="w-24 flex-shrink-0 flex flex-col items-center">
+                            <div class="card-muji w-full py-3 text-center shadow-sm">
+                                <button @click="p.ampm = p.ampm === '上午' ? '下午' : '上午'" class="text-[9px] font-black opacity-50">{{ p.ampm }}</button>
+                                <div class="time-focus text-[#333]">{{ p.time.split(':')[0] }}<span class="text-lg opacity-30">:{{ p.time.split(':')[1] }}</span></div>
+                                <div class="text-[10px] mt-1">⏰ ALARM</div>
+                            </div>
+                            <select v-model="p.time" class="mt-2 text-[10px] bg-white/50 rounded-lg p-1 outline-none">
                                 <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
                             </select>
                         </div>
-                        <button @click="currentPlans.splice(i, 1)" class="text-xs opacity-20">刪除</button>
-                    </div>
 
-                    <div class="space-y-3">
-                        <input v-model="p.loc" @click="goToMap(p.mapLink)" placeholder="行程標題 (點擊可跳至地圖)" class="text-lg font-black bg-transparent w-full outline-none text-blue-800">
-                        <div class="text-xs text-gray-500 space-y-2">
-                            <div class="flex items-center">📍 <input v-model="p.mapLink" placeholder="地址..." class="ml-2 w-full bg-transparent border-b border-black/5"></div>
-                            <div class="flex items-center">🍴 <input v-model="p.eat" placeholder="飲食..." class="ml-2 w-full bg-transparent border-b border-black/5"></div>
+                        <div class="card-muji flex-grow p-5 space-y-3">
+                            <input v-model="p.loc" placeholder="行程標題 (例如：築地市場)" class="text-lg font-black bg-transparent outline-none w-full border-b border-black/5 pb-1">
+                            
+                            <div class="space-y-2">
+                                <div class="flex items-center text-xs text-gray-500">
+                                    <span class="mr-2">📍</span>
+                                    <input v-model="p.mapLink" placeholder="景點地址..." class="input-underlined">
+                                </div>
+                                <div class="flex items-center text-xs text-gray-500">
+                                    <span class="mr-2">🍴</span>
+                                    <input v-model="p.eat" placeholder="飲食安排..." class="input-underlined">
+                                </div>
+                                <div class="flex items-start text-xs text-gray-400">
+                                    <span class="mr-2 mt-1">📝</span>
+                                    <textarea v-model="p.note" placeholder="詳細備註與筆記..." class="w-full bg-transparent border-none outline-none h-12 resize-none"></textarea>
+                                </div>
+                            </div>
                         </div>
-                        <textarea v-model="p.note" placeholder="詳細備註..." class="w-full text-xs bg-gray-50 p-3 rounded-xl h-20 outline-none"></textarea>
+                    </div>
+                    <button @click="addPlan" class="w-full py-5 rounded-2xl border-2 border-dashed border-gray-300 text-xs font-bold opacity-50">+ 新增行程</button>
+                </div>
+
+                <div v-if="tab === 'items'" class="card-muji p-6 space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold">旅行清單</h3>
+                        <div class="flex space-x-2">
+                            <input v-model="customItem" placeholder="自定義項目..." class="text-xs p-2 rounded-lg bg-gray-100 outline-none">
+                            <button @click="addCustomItem" class="px-3 py-1 bg-[#333] text-white text-xs rounded-lg font-bold">新增</button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 gap-3">
+                        <div v-for="(item, idx) in checklist" :key="idx" 
+                             class="flex items-center justify-between p-3 rounded-xl bg-white/40 border border-white/50"
+                             @click="item.done = !item.done">
+                            <div class="flex items-center space-x-3">
+                                <div :class="['checkbox-custom', { 'checked': item.done }]">
+                                    <span v-if="item.done" class="text-xs">✓</span>
+                                </div>
+                                <span :class="['text-sm font-medium', { 'line-through opacity-30': item.done }]">{{ item.name }}</span>
+                            </div>
+                            <button @click.stop="checklist.splice(idx, 1)" class="opacity-20 text-xs italic">刪除</button>
+                        </div>
                     </div>
                 </div>
-                <button @click="addPlan" class="w-full py-4 rounded-2xl border-2 border-dashed border-black/20 font-bold opacity-40">+ 新增行程點</button>
-            </div>
 
-            <div v-show="tab === 'map'" class="space-y-4">
-                <div id="map"></div>
-                <p class="text-[10px] text-center opacity-40">地圖數據由 OpenStreetMap 提供</p>
-            </div>
+                <div v-show="tab === 'map'" class="space-y-4"><div id="map"></div></div>
 
-            <div v-if="tab === 'members'" class="card-muji p-8 space-y-6">
-                <h3 class="text-xl font-black">👥 旅伴成員</h3>
-                <div class="flex gap-2">
-                    <input v-model="newMemberName" placeholder="成員姓名..." class="flex-grow p-3 rounded-xl bg-gray-100 outline-none">
-                    <button @click="addMember" class="px-6 bg-black text-white rounded-xl font-bold">新增</button>
-                </div>
-                <div class="space-y-3">
-                    <div v-for="(m, idx) in members" :key="idx" class="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm">
-                        <span class="font-bold">{{ m }}</span>
-                        <button @click="members.splice(idx, 1)" class="text-xs text-red-400">移除</button>
+                <div v-if="tab === 'finance'" class="card-muji p-8 space-y-6">
+                    <input type="number" v-model="finance.amount" placeholder="外幣金額" class="w-full p-4 rounded-xl text-2xl font-black text-center outline-none bg-gray-50 shadow-inner">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white/50 p-3 rounded-xl">
+                            <label class="text-[10px] opacity-40 uppercase block">匯率</label>
+                            <input type="number" v-model="finance.rate" class="w-full bg-transparent font-bold">
+                        </div>
+                        <div class="bg-white/50 p-3 rounded-xl">
+                            <label class="text-[10px] opacity-40 uppercase block">付款人</label>
+                            <input v-model="finance.payer" class="w-full bg-transparent font-bold">
+                        </div>
+                    </div>
+                    <input v-model="finance.receiver" placeholder="分攤旅伴 (例如: A, B, C)" class="w-full p-4 rounded-xl text-sm bg-white/50 outline-none">
+                    <div class="bg-[#333] p-10 rounded-[32px] text-white text-center shadow-xl">
+                        <p class="text-[10px] opacity-40 mb-2">AUTO CALCULATE</p>
+                        <p v-if="splitInfo" class="text-xl font-medium italic text-[#bda38f]">{{ splitInfo }}</p>
+                        <p v-else class="text-sm opacity-20">請輸入分攤人</p>
                     </div>
                 </div>
-            </div>
-
-            </div>
+            </main>
+        </div>
     </div>
 
     <script>
@@ -134,72 +189,80 @@
         createApp({
             setup() {
                 const isSetup = ref(false); const tab = ref('list'); const selectedDay = ref(1);
-                const menuOpen = ref(false); const newMemberName = ref('');
                 const setup = ref({ destination: '', startDate: '', endDate: '' });
-                const areaInfo = ref({}); // 用來儲存每一天的區域資訊
-                const itineraryData = ref({}); const members = ref([]);
+                const weather = ref({ temp: '--', desc: 'Sunny' });
+                const finance = ref({ amount: 0, rate: 0.22, payer: '我', receiver: '' });
+                const itineraryData = ref({});
+                const customItem = ref('');
                 
-                const timeSlots = Array.from({length: 24}, (_, i) => i.toString().padStart(2, '0') + ':00');
+                // 預設用品清單，將會直接在畫面上呈現
+                const checklist = ref([
+                    { name: "護照/簽證", done: false },
+                    { name: "網卡/Wifi機", done: false },
+                    { name: "日幣現金", done: false },
+                    { name: "換洗衣物", done: false },
+                    { name: "行動電源", done: false }
+                ]);
+
+                const timeSlots = Array.from({length: 24}, (_, i) => [i.toString().padStart(2, '0') + ':00', i.toString().padStart(2, '0') + ':30']).flat();
 
                 onMounted(() => {
-                    const saved = localStorage.getItem('myTripData_v3');
+                    const saved = localStorage.getItem('myTripData_v2');
                     if (saved) {
                         const parsed = JSON.parse(saved);
                         itineraryData.value = parsed.itinerary || {};
                         setup.value = parsed.setup || setup.value;
-                        members.value = parsed.members || [];
-                        areaInfo.value = parsed.areaInfo || {};
+                        checklist.value = parsed.checklist || checklist.value;
                         if (setup.value.destination) isSetup.value = true;
                     }
                 });
 
-                watch([itineraryData, setup, members, areaInfo], () => {
-                    localStorage.setItem('myTripData_v3', JSON.stringify({ 
-                        itinerary: itineraryData.value, setup: setup.value, members: members.value, areaInfo: areaInfo.value 
-                    }));
+                watch([itineraryData, setup, checklist], () => {
+                    localStorage.setItem('myTripData_v2', JSON.stringify({ itinerary: itineraryData.value, setup: setup.value, checklist: checklist.value }));
                 }, { deep: true });
 
-                // 地圖與標記邏輯
-                let map, markers = [];
-                const updateMapMarkers = (focusLoc) => {
-                    setTimeout(() => {
-                        if (!map) { 
-                            map = L.map('map').setView([25, 121], 10); 
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); 
-                        }
-                        markers.forEach(m => map.removeLayer(m)); markers = [];
-                        currentPlans.value.forEach(p => {
-                            if (p.mapLink) {
-                                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(p.mapLink)}`)
-                                .then(r => r.json()).then(data => {
-                                    if (data[0]) {
-                                        const m = L.marker([data[0].lat, data[0].lon]).addTo(map).bindPopup(p.loc || p.mapLink);
-                                        markers.push(m);
-                                        if (focusLoc === p.mapLink) map.flyTo([data[0].lat, data[0].lon], 15);
-                                    }
-                                });
-                            }
-                        });
-                    }, 200);
+                const weatherIcon = computed(() => {
+                    const d = weather.value.desc.toLowerCase();
+                    if (d.includes('sun')) return '☀️'; if (d.includes('cloud')) return '☁️'; if (d.includes('rain')) return '🌧️';
+                    return '🌤️';
+                });
+
+                const splitInfo = computed(() => {
+                    if (!finance.value.amount || !finance.value.receiver) return "";
+                    const totalTWD = Math.round(finance.value.amount * finance.value.rate);
+                    const people = finance.value.receiver.split(',').filter(n => n.trim() !== "");
+                    if (people.length === 0) return "";
+                    return `${people.join(', ')} 應給 ${finance.value.payer} NT$ ${Math.round(totalTWD / (people.length + 1))}`;
+                });
+
+                const addCustomItem = () => {
+                    if (customItem.value.trim()) {
+                        checklist.value.push({ name: customItem.value, done: false });
+                        customItem.value = '';
+                    }
                 };
 
-                const goToMap = (loc) => { if(loc) { tab.value = 'map'; updateMapMarkers(loc); } };
-                const addMember = () => { if(newMemberName.value) { members.value.push(newMemberName.value); newMemberName.value = ''; } };
-                const resetToHome = () => { if(confirm('確定要回到首頁並修改旅程嗎？數據會保留。')) { isSetup.value = false; menuOpen.value = false; } };
-                
                 const totalDays = computed(() => {
                     if (!setup.value.startDate || !setup.value.endDate) return 1;
                     return Math.max(1, Math.ceil(Math.abs(new Date(setup.value.endDate) - new Date(setup.value.startDate)) / 86400000) + 1);
                 });
+
+                const formattedDate = computed(() => {
+                    if (!setup.value.startDate) return '';
+                    const d = new Date(setup.value.startDate); d.setDate(d.getDate() + (selectedDay.value - 1));
+                    return `${d.getMonth() + 1}/${d.getDate()}`;
+                });
+
                 const currentPlans = computed(() => {
                     const key = `day_${selectedDay.value}`;
                     if (!itineraryData.value[key]) itineraryData.value[key] = [];
                     return itineraryData.value[key];
                 });
+
                 const addPlan = () => currentPlans.value.push({ ampm: '上午', time: '09:00', loc: '', mapLink: '', eat: '', note: '' });
                 const finishSetup = () => { if(setup.value.destination) isSetup.value = true; };
 
-                return { isSetup, setup, totalDays, tab, selectedDay, itineraryData, currentPlans, finishSetup, addPlan, timeSlots, menuOpen, members, newMemberName, addMember, resetToHome, areaInfo, updateMapMarkers, goToMap };
+                return { isSetup, setup, totalDays, tab, selectedDay, finance, itineraryData, currentPlans, weather, weatherIcon, formattedDate, finishSetup, addPlan, timeSlots, checklist, customItem, addCustomItem, splitInfo };
             }
         }).mount('#app');
     </script>
